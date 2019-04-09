@@ -265,6 +265,12 @@ catkin_DIR:PATH=/opt/ros/kinetic/share/catkin/cmake
 //The directory containing a CMake configuration file for cpp_common.
 cpp_common_DIR:PATH=/opt/ros/kinetic/share/cpp_common/cmake
 
+//Value Computed by CMake
+delta_robot_BINARY_DIR:STATIC=/home/dlab/me212KneadForSpeed/build/delta_robot
+
+//Value Computed by CMake
+delta_robot_SOURCE_DIR:STATIC=/home/dlab/me212KneadForSpeed/src/delta_robot
+
 //The directory containing a CMake configuration file for geometry_msgs.
 geometry_msgs_DIR:PATH=/opt/ros/kinetic/share/geometry_msgs/cmake
 
