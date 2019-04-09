@@ -5,10 +5,13 @@ import math
 import motor
 from std_msgs.msg import Float32MultiArray
 
+
 class Odrive:
     def __init__(self):
+
         self.rate = 100 #[Hz]
         self.motor1 = motor.Motor("205337853548",0)
+
         #self.motor2 = Motor()
         #self.motor3 = Motor()
 
@@ -18,7 +21,6 @@ class Odrive:
         self.joint_angles_pub = rospy.Publisher("/joint_angles", Float32MultiArray, queue_size=10)
         self.joint_currents_pub = rospy.Publisher("/joint_currents", Float32MultiArray, queue_size=10)
         rospy.Timer(rospy.Duration(1./self.rate), self.publish)
-
 
     def angle_cb(self,msg):
         self.motor1.set_angle(msg.data[0])
@@ -44,5 +46,6 @@ class Odrive:
 if __name__ == "__main__":
     rospy.init_node('odrive', anonymous=True)
     od = Odrive()
+
     rospy.spin()
 

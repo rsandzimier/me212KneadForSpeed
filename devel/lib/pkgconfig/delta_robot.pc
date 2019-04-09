@@ -1,8 +1,0 @@
-prefix=/home/dlab/me212KneadForSpeed/devel
-
-Name: delta_robot
-Description: Description of delta_robot
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/dlab/me212KneadForSpeed/devel/lib 
-Requires: 
