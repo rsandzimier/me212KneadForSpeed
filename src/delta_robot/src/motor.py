@@ -1,9 +1,7 @@
 #!/usr/bin/python
 
-import sys
-sys.path.append("/home/dlab/ODrive/tools")
 import odrive
-#from odrive.enums import *
+from odrive.enums import *
 import math
 
 class Motor:
