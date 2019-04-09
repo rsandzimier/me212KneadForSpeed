@@ -1,0 +1,2 @@
+robot_package
+-DCATKIN_DEVEL_PREFIX=/home/dlab/me212KneadForSpeed/devel -DCMAKE_INSTALL_PREFIX=/home/dlab/me212KneadForSpeed/install -G Unix Makefiles

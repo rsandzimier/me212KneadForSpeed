@@ -1,0 +1,8 @@
+prefix=/home/dlab/me212KneadForSpeed/install
+
+Name: robot_package
+Description: Description of robot_package
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/dlab/me212KneadForSpeed/install/lib 
+Requires: 
