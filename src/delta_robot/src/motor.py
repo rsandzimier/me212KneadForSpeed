@@ -3,23 +3,24 @@
 import odrive
 from odrive.enums import *
 import math
+import time
 
 class Motor:
-    COUNTS_PER_REV = 1000 # Before gear box 
+    COUNTS_PER_REV = 4000 # Before gear box 
     GEAR_RATIO = 100
 
     Nm2A = 0.00000604
 
-    def __init__(self, serial, axis):
-        self.odrv = odrive.find_any(serial_number = serial)
+    def __init__(self, odrv, axis):
+        self.odrv = odrv
         self.axis = self.odrv.axis0 if axis == 0 else self.odrv.axis1
-        self.odrv.config.break_resistance = 0
+        self.odrv.config.brake_resistance = 0
         self.axis.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
         self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
         self.calibration_offset = 0 # Radians
 
     def set_angle(self, angle):
-        self.axis.controller.pos_setpoint(self.rad2counts(angle + self.calibration_offset))
+        self.axis.controller.pos_setpoint = self.rad2counts(angle + self.calibration_offset)
     
     def get_angle(self):
         return self.counts2rad(self.axis.encoder.pos_estimate) - self.calibration_offset
@@ -31,10 +32,10 @@ class Motor:
         self.calibration_offset = offset
 
     def rad2counts(self, angle):
-        return angle*self.COUNTS_PER_REV*self.GEAR_RATIO/(2*math.pi)
+        return -angle*self.COUNTS_PER_REV*self.GEAR_RATIO/(2*math.pi)
     
     def counts2rad(self, counts):
-        return counts*2*math.pi/(self.COUNTS_PER_REV*self.GEAR_RATIO)
+        return -counts*2*math.pi/(self.COUNTS_PER_REV*self.GEAR_RATIO)
 
     def full_init(self):
         self.axis.motor.config.pre_calibrated = False
@@ -46,7 +47,7 @@ class Motor:
         #pole pairs
         self.axis.motor.config.pole_pairs = 4
 
-        self.axis.controller.config.vel_limit = 600000 #50000 counts/second is 1/8 revolution per second
+        self.axis.controller.config.vel_limit = 200000 #50000 counts/second is 1/8 revolution per second
 
         # 0.0612 [(revolutions/second)/Volt], 400000 counts per revolution
         # Max speed is 1.35 Revolutions/second, or 539000counts/second
@@ -91,7 +92,6 @@ class Motor:
         # save configuration
         self.odrv.save_configuration()
         time.sleep(2)
-        printErrorStates()
         try:
             self.odrv.reboot()
         except:
