@@ -1,0 +1,10 @@
+Overview: This node makes high level decisions and must be able to communicate with the mobile robot. The format and requirements of this node are not very well defined and will likely be one of the last things we write
+
+Subscribed topics:
+Topic that tells high level node that calibration is complete
+Topic that contains positions of ingredients and open pizza slots (from CV node)
+
+Published topics:
+Topic that tells calibration node to start
+Topic that gives trajectory planner info about current task
+

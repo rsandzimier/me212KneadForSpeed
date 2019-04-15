@@ -1,0 +1,8 @@
+Overview: Takes camera image and uses CV to output locations and orientations of ingredients and open pizza slots. Will use gamma filter, HSV color filter, noise reduction, blob detection, centroid/orientation calculation. Can use function that provides camera calibration info (ie, we can pass it a position/orientation in the image and the function returns a position/orientation in the world x,y,z frame)
+
+Subscribed Topics: 
+Topic from the camera containing an image. Name TBD
+
+Published Topics:
+name: /ingredient_poses type: std_msgs/Float32MultiArray (could also be an array of geometry_msgs/Pose or something similar) Contains array with position and orientation of all ingredients (not a fixed number of ingredients)
+name: /open_slot_positions type: std_msgs/Float32MultiArray Contains array with positions of all open pizza slots (not a fixed number of open slots)

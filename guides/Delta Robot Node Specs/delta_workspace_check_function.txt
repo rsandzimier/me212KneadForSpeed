@@ -1,0 +1,7 @@
+Overview: Function that takes as a parameter an (x,y,z) point and returns whether or not that point is inside the workspace. Needs to consider if there is a solution to the inverse kinematics (see relevant problem set problem), max angle of spherical rod ends, and any other physical constraints (avoiding collision with frame, hardstop, etc). This can be done "online" or "offline." Online: function does necessary calculations whenever function is called. Offline: Do calculations for the entire workspace beforehand, and function refers to a lookup table (ie look up x and y position and table says what the min and max allowable z are for that x and y). Choice of online/offline depends on how long the calculations take. Can call an IK function, which will be written separately. 
+
+Parameters: x,y,z position of end effector
+
+Return value: True or False depending on if the point is inside the workspace of the delta robot
+
+

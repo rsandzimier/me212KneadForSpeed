@@ -1,0 +1,5 @@
+Overview: Takes in an x,y,z position of the end effector (center of rotation of the gripper) and returns the joint angles for each motor after solving the inverse kinematics. Should choose an appropriate IK solution (since there are multiple solutions). Note that the end effector center is not centered on the bottom plate. If no IK solution, return some defined behavior (ie, False or empty list)
+
+Parameters: x,y,z position of the end effector (center of rotation of gripper)
+
+Return value: list with joint angles for each motor. If no IK solution, return something defined (ie. False or empty list [])

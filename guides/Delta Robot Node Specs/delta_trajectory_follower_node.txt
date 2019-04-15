@@ -1,0 +1,11 @@
+Overview: This node receives a trajectory and commands that trajectory to the motors with correct timing. For example, if the trajectory frequency is 100Hz, every 0.01 seconds, this node should command all of the motors to the positions specified by the trajectory at the current time step. After the trajectory is finished, this node should notify the trajectory planner node and then wait for the next trajectory. 
+
+Subscribed topics:
+name: /trajectory type: std_msgs/Float32MultiArray This topic is a 2-dimensional float array of dimensions nxm. n is the number of time steps. m is the number of parameters it takes to describe the location of the robot (likely m=5: 3 motors + 1 gripper rotation + 1 gripper open/close). 
+name: /joint_angles type: std_msgs/Float32MultiArray This topic contains the current joint angles of the 3 delta robot motors (from the odrive node)
+A topic which provides the position of the dynamixel motors of the gripper. Name TBD. 
+
+Published topics:
+name: /joint_commands type: std_msgs/Float32MultiArray This topic is used by the odrive node to command the 3 delta robot motors to the position at the current time step
+name: /finished_trajectory type: std_msgs/Bool This topic tells the trajectory planner that the current trajectory is complete
+A topic which contains commands for the dynamixels in the gripper. Name and format TBD

@@ -1,0 +1,5 @@
+Overview: Function that takes in a position/orientation in the image and maps to a position/orientation in the world x,y,z frame. This will require some calibration procedure to figure out this mapping. Likely, the part that will take the longest is figuring out how to do this. The actual function itself should be simple once the method is figured out. 
+
+Parameters: position and orientation in image (in pixels)
+
+Return value: position and orientation in world x,y,z frame

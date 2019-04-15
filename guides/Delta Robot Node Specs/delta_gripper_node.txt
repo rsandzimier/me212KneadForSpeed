@@ -1,0 +1,9 @@
+Overview: This node receives commands from the trajectory follower and publishes corresponding commands to the dynamixels. This node will have to interface with a ROS package that deals with communication to the dynamixels. See http://wiki.ros.org/dynamixel_motor. We will need to use this ROS package and the specs of this node will depend on the requirements of that dynamixel_motor package
+
+Subscribed topics:
+A topic with commands from the trajectory follower. Name and format TBD. Likely, this will include a rotation angle and whether or not the gripper should currently be opened or closed
+
+Published topics:
+A topic which commands the dynamixels to the correct position. This topic name/format will likely be determined by the dynamixel ROS package and whatever format required to integrate with that existing package
+A topic that contains the current positions of the dynamixels. Name and format TBD
+
