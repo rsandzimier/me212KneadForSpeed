@@ -1,0 +1,7 @@
+Overview: This node receives wheel velocity commands from the path follower and drives the motors with a PID or other suitable controller. A lot of this code was written during some early labs. The changes are that this needs to be a node that interacts with ROS. This will likely be in a ROS node that talks to an arduino. This might be the same node that publishes Odometery data.
+
+Subscribed topics:
+A topic with commands for drive speed and curvature in a Float32MultiArray.
+
+
+

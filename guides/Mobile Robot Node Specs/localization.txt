@@ -1,0 +1,9 @@
+Overview: This node publishes a transformation of the current location of the robot with respect to the map. The current plan is to use a Kalman Filter. There are plenty of premade nodes for this, we just have to make sure the inputs and output will mesh with the rest of the robot architecture.
+
+Subscribed topics:
+nav_msgs/Odometry
+
+Published topics:
+current pose with respect to the map
+
+

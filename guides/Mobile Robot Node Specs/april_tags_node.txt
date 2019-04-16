@@ -1,0 +1,7 @@
+Overview: Takes camera image returns the AprilTag locations and orientations. AprilTags2_ROS should be a good resource. https://wiki.ros.org/apriltags2_ros/Tutorials/Detection%20in%20a%20video%20stream
+
+Subscribed Topics: 
+Topic from the camera containing an image. 
+
+Published Topics:
+AprilTag information. TBD

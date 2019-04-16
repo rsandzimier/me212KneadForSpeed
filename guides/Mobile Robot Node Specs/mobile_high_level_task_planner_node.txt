@@ -1,0 +1,8 @@
+Overview: This node makes high level decisions and must be able to communicate with the delta robot. The format and requirements of this node are not very well defined and will likely be one of the last things we write
+
+Subscribed topics:
+Topics update on the state of the field such as if the robot has completed the last task and if the order has been placed on the robot.
+
+Published topics:
+Topic that gives path planner info about current task
+

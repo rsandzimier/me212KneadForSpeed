@@ -1,0 +1,10 @@
+Overview: This node subscribes to topic(s) published by the high level task planner which define the current task. This node then generates a trajectory for the robot. The trajectory takes the form of an array of poses. This node should make sure that the trajectory is within the traversable area of the robot. This node can call the map function and localization for current location. 
+
+Subscribed topics: 
+name: /finished_path type: std_msgs/Bool This tells this node when the path follower has completed the path.
+Some topic(s) published by the high level task planner which give all the information necessary to define the current task. This is not very defined right now. Please provide feedback to the team about what the high level task planner needs to publish. 
+
+Published topics: 
+name: /trajectory type: nav_msgs/PoseArray This topic tells the path follower what path to follow. 
+name: /finished_task type: std_msgs/Bool This topic basically is to tell the high level task planner that the current task is complete.
+		
