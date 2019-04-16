@@ -1,1 +1,87 @@
-,,,
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+INITIAL SET UP
+Questions? Ask on Slack!
+https://github.mit.edu/rsandz/me212KneadForSpeed
+
+Request access or send Ryan your github.mit.edu user name to be added as a collaborator on this repository. Note we are using github.mit.edu, not github.com since we can make it a private repository that way.
+
+You will need to set up an SSH key to use github.mit.edu. See link below. 
+https://help.github.com/en/articles/connecting-to-github-with-ssh#platform-all
+
+If you prefer, you can use Github Desktop (for Windows) instead of using the command line. This how to is focused on using git in the command line, however
+https://desktop.github.com/
+
+Clone the repository. This will download the github repository locally and allow you to run git commands in the terminal. In terminal:
+git clone git@github.mit.edu:rsandz/me212KneadForSpeed.git
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+WORKING ON YOUR OWN BRANCH
+If you are developing code, create your own separate branch instead of working on the master branch (that way only stable/tested/ready code is part of the master branch)
+
+To checkout a different branch (if a branch with that name does not already exist, it will create a new one):
+git checkout -b branch_name
+
+You can now make any local changes you want to your branch
+
+Periodically you will want to commit your changes you've made to your branch (think of each commit like a checkpoint. With each commit, we end up with a tree of checkpoints that show what pieces of code changed at what times). Note: commits are local to your computer (i.e. the rest of the team cannot see them until you "push" them). 
+
+Typical way to commit your changes is:
+git status              
+- this tells you what branch you are on, what files have changed, and other stuff)
+git add -A              
+- this adds all of the changed files to the list of changes that will be committed. If you only want to commit certain files or directories you can replace the -A with the file or directory 
+git commit -a -m "Descriptive message that describes the changes you made"
+- this commits the changes (all of the files you added with the previous command) with a message that describes the changes that were made
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PUSHING YOUR CHANGES (NOT TO MASTER)
+You can continue to make changes and commits locally all you want. Periodically you may want to push these changes to the "remote repository" (ie, the place where everyone can now see the changes. "remote" = not local to your computer). To do this, you want to push the changes to the remote branch with the same name as your branch (do not push directly to the remote master branch). Typical way to do this:
+
+git status
+- To make sure you have currently checked out the branch you are trying to push
+git push -u origin branch_name
+- Push changes to the remote branch called branch_name. Make sure not to push directly to the remote master branch. You will likely be prompted with your github.mit.edu password when you push
+
+Now anyone can see your changes on branch_name.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PULL REQUESTS (TO MERGE YOUR STABLE BRANCH WITH MASTER)
+When you've gotten your code to a point that is stable and ready to merge with the master branch, you will submit a pull request. You can do this on the github.mit.edu website. Go to the pull request tab. Choose master as the base branch and branch_name as the compare branch. You can review the changes and it will submit the request. Now, anyone else can review the changes and approve the pull request and your changes will be merged into the master branch. This makes sure there aren't any merge conflicts and at least one other person looks at your changes as a second set of eyes.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PULLING CHANGES
+If someone else has merged their branch with master, your (local) master branch and your own (local) branch don't have the latest code. Typical way to do this:
+
+git status
+- Make sure you have checked out the branch you want to pull into (we will fetch the latest master branch and merge it in with the branch we have currently checked out).
+- Also make sure you don't have any uncommitted changes. If you do, commit them before pulling
+- This will also tell you if the branch is behind the remote (or origin) master branch. If it is, you should pull the master branch to incorporate the latest master
+git checkout -b branch_name
+- If you are not on the correct branch, checkout the correct branch first
+git pull origin master
+- This fetches the latest remote master branch and merges it into the currently checkout out branch (branch_name)
+- Note there could be merge conflicts. However, hopefully this is mitigated by our use of pull requests (see above) and the fact that generally only 1 or 2 people will have to work on the same file.
+- Your branch is now up to date with master
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+EXAMPLE (comments are preceded by #)
+
+git checkout -b trajectory_follower_devel
+# Make some changes to some code
+git status # Tells me which files have been changed since the last commit
+git add -A # Adds all my changes to the list of what will be committed next (ie, the tracked files)
+git commit -a -m "Added a preliminary trajectory_follower node"
+# Changed some more code, found a bug and fixed it
+git status # Always a good idea to do this just to be sure you are on the right branch and know what files changed
+git add -A 
+git commit -a -m "Made function that handles publishing of topics. Fixed bug that caused crash when the trajectory list was empty"
+# Test out the code and it works. Not ready to push to master, but want to push the changed to this remote branch
+git push -u origin trajectory_follower_devel
+# Your latest changes to your branch are now available for everyone on the team (but not on the master branch)
+# Someone else merges the branch they have been working on to master. Before making more changes to your trajectory_follower_devel, you'd like to pull the latest master
+git status # You notice you are not on the correct branch right now
+git checkout -b trajectory_follower_devel # changes you to correct branch
+git status # You are now on the correct branch and you see that you have no uncommitted changes. And you see that this branch is behind the origin master branch (as you expected)
+git pull origin master
+git status # Now says that you are up-to-date with origin master
+# Make more changes, commits, pushes, etc. You get to point where you are ready to merge your branch with master
+# Go to the repository on github.mit.edu. Follow the directions above under PULL REQUESTS. Wait for someone else to review your code and then it will be merged with master (pending any merge conflicts being resolved)
+
+Questions? Ask on Slack!
+
