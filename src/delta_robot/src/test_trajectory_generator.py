@@ -32,7 +32,7 @@ class TestTrajectoryGenerator:
         joint_traj = []
         gripper_traj = []
 
-        for t in range(0,cycles*self.rate/frequency):
+        for t in range(0,int(cycles*self.rate/frequency)):
             s = amplitude*math.sin(2*math.pi*t*frequency/self.rate)
             j = JointPosition()
             j.angles = [s,s,s]
