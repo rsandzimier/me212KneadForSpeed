@@ -20,7 +20,7 @@ class TestTrajectoryGenerator:
 
         time.sleep(1)
 
-        self.sine_wave(1, 0.5, 5, True)
+        self.sine_wave(0.5, 0.5, 5, True)
 
 
     def finished_trajectory_cb(self,msg):
