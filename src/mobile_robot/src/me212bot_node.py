@@ -6,6 +6,7 @@
 import rospy
 import threading
 import serial
+import tf
 import tf.transformations as tfm
 from geometry_msgs.msg import Pose, Quaternion
 
@@ -13,6 +14,7 @@ import helper
 from mobile_robot.msg import WheelCmdVel
 
 serialComm = serial.Serial('/dev/ttyACM0', 115200, timeout = 5)
+broadcaster = tf.TransformBroadcaster()
 
 ## main function (Need to modify)
 def main():
@@ -63,6 +65,9 @@ def read_odometry_loop():
             
             qtuple = tfm.quaternion_from_euler(0, 0, theta)
             odom.orientation = Quaternion(qtuple[0], qtuple[1], qtuple[2], qtuple[3])
+            broadcaster.sendTransform((x, y, 0.0), qtuple,
+                                      prevtime,
+                                      "base_link", "map")
         except:
             # print out msg if there is an error parsing a serial msg
             print 'Cannot parse', splitData
