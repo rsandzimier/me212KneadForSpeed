@@ -7,7 +7,7 @@ import time
 
 class Calibration:
     JOINT_SPEED = -0.1 # Radians per second
-    CURRENT_THRESHOLD = 3 # Amps
+    CURRENT_THRESHOLD = 4 # Amps
     TARGET_JOINT_POSITION = 0 # Position to go to after calibration is over
     TARGET_POSITION_TOLERANCE = 0.01 # Radians
     MAX_DISTANCE = 2*math.pi # Radians

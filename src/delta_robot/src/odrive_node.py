@@ -19,7 +19,7 @@ class Odrive:
         self.joint_currents_pub = rospy.Publisher("/joint_currents", Float32MultiArray, queue_size=10)
 
         print "Initializing motors"
-        odrv0 = odrive.find_any(serial_number = "205337853548")
+        odrv0 = odrive.find_any(serial_number = "208637853548")
         odrv1 = odrive.find_any(serial_number = "208737993548")
         self.motor0 = motor.Motor(odrv0,0)
         self.motor1 = motor.Motor(odrv1,0)
@@ -47,7 +47,6 @@ class Odrive:
 
         self.joint_angles_pub.publish(joint_angles_msg)
         self.joint_currents_pub.publish(joint_currents_msg)
-
 
 if __name__ == "__main__":
     rospy.init_node('odrive', anonymous=True)
