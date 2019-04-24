@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
+find_package( OpenCV 2 REQUIRED )
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -117,6 +119,7 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -137,7 +140,7 @@ include_directories(
 # add_dependencies(robot_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(robot_node
+#target_link_libraries(robot_node
 #   ${catkin_LIBRARIES}
 # )
 
