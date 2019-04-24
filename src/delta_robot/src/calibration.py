@@ -3,10 +3,11 @@
 import rospy
 import math
 from std_msgs.msg import Float32MultiArray
+import time
 
 class Calibration:
     JOINT_SPEED = -0.1 # Radians per second
-    CURRENT_THRESHOLD = 3 # Amps
+    CURRENT_THRESHOLD = 4 # Amps
     TARGET_JOINT_POSITION = 0 # Position to go to after calibration is over
     TARGET_POSITION_TOLERANCE = 0.01 # Radians
     MAX_DISTANCE = 2*math.pi # Radians
@@ -52,6 +53,16 @@ class Calibration:
     def update(self,event):
         if len(self.joint_angles) == 0 or len(self.joint_currents) == 0: return
 
+        if all(self.calibration_complete) and \
+            abs(self.joint_angles[0] - self.TARGET_JOINT_POSITION - self.calibration_offsets[0]) < self.TARGET_POSITION_TOLERANCE and \
+            abs(self.joint_angles[1] - self.TARGET_JOINT_POSITION - self.calibration_offsets[1]) < self.TARGET_POSITION_TOLERANCE and \
+            abs(self.joint_angles[2] - self.TARGET_JOINT_POSITION - self.calibration_offsets[2]) < self.TARGET_POSITION_TOLERANCE:
+            calibration_offsets_msg = Float32MultiArray()
+            calibration_offsets_msg.data = self.calibration_offsets
+            self.calibration_offsets_pub.publish(calibration_offsets_msg)
+            print "Calibration Complete"
+            rospy.signal_shutdown("Calibration Complete")
+
         joint_commands_msg = Float32MultiArray()
 
         for i in range(0,3):
@@ -64,16 +75,6 @@ class Calibration:
         joint_commands_msg.data = self.joint_commands
 
         self.joint_commands_pub.publish(joint_commands_msg)
-
-        if all(self.calibration_complete) and \
-            abs(self.joint_angles[0] - self.TARGET_JOINT_POSITION - self.calibration_offsets[0]) < self.TARGET_POSITION_TOLERANCE and \
-            abs(self.joint_angles[1] - self.TARGET_JOINT_POSITION - self.calibration_offsets[1]) < self.TARGET_POSITION_TOLERANCE and \
-            abs(self.joint_angles[2] - self.TARGET_JOINT_POSITION - self.calibration_offsets[2]) < self.TARGET_POSITION_TOLERANCE:
-            calibration_offsets_msg = Float32MultiArray()
-            calibration_offsets_msg.data = self.calibration_offsets
-            self.calibration_offsets_pub.publish(calibration_offsets_msg)
-            print "Calibration Complete"
-            rospy.signal_shutdown("Calibration Complete")
 
         if abs(self.joint_commands[0] - self.initial_joint_angles[0]) > self.MAX_DISTANCE or \
             abs(self.joint_commands[1] - self.initial_joint_angles[1]) > self.MAX_DISTANCE or \
