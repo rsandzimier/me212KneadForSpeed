@@ -26,7 +26,7 @@ class TestTrajectoryGenerator:
     def finished_trajectory_cb(self,msg):
         print "Trajectory finished: " + str(msg.data)
 
-    def sine_wave(self, amplitude = 0.2, frequency = 0.5, cycles = 1, include_gripper = False):
+    def sine_wave(self, amplitude = 0.2, frequency = 0.2, cycles = 1, include_gripper = False):
         trajectory_msg = DeltaTrajectory()
 
         joint_traj = []
@@ -38,8 +38,8 @@ class TestTrajectoryGenerator:
             j.angles = [s,s,s]
             joint_traj.append(j)
             g = GripperPosition()
-            g.angle = s
-            g.open = True if (t*frequency*1.0/self.rate)%1 > 0.5 else False
+            g.angle = 0
+            g.open = False# if (t*frequency*1.0/self.rate)%1 > 0.5 else False
             gripper_traj.append(g)
 
         trajectory_msg.joint_trajectory = joint_traj

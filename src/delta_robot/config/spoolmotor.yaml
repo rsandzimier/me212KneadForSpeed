@@ -4,7 +4,7 @@ spool_controller:
         module: joint_position_controller
         type: JointPositionController
     joint_name: spoolmotor
-    joint_speed: 0.5
+    joint_speed: 2
     motor:
         id: 2
         init: 2047

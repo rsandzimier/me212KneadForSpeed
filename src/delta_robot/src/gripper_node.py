@@ -16,8 +16,8 @@ from std_msgs.msg import Float64 # A standard message type that allows you to us
 class Gripper: # Class name capitalized
 
 	# Do initialization of class variables
-	SPOOL_OPEN = 1
-	SPOOL_CLOSED = 0
+	SPOOL_OPEN = -1.4
+	SPOOL_CLOSED = 0.4
 	THRESHOLD = 0.1
 
 	#Multiplier from the angle to the desired encoder reading, and the encoder offset for "zero" angle
