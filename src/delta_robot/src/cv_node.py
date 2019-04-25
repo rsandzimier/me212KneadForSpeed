@@ -27,16 +27,33 @@ class CV:
 			print(e)
 		if len(self.image_dims) == 0:
 			self.image_dims = cv_image.shape
+		cv2.imshow("Image Window", cv_image)
+		cv2.waitKey(3)
 		# Gamma filter
 		cv_image = self.adjust_gamma(cv_image, 1.0)
 		# Position Segment (topping location vs pizza location)
 		# HSV Filter
-		pepperoni = self.hsv_filter(cv_image, [240,150,100], [30,220,255], True)
+		pepperoni = self.hsv_filter(cv_image, [155,64,50], [175,180,125], True)
+		pineapple = self.hsv_filter(cv_image, [10,30,150], [30,128,225], True)
+		olive = self.hsv_filter(cv_image, [125,0,0], [175,60,75], True) # Needs work
+		anchovie = self.hsv_filter(cv_image, [100,30,64], [130,220,200], True) # Needs work
+
+		cv2.imshow("HSV", olive)
+		cv2.waitKey(3)
 		# Noise reduction
 		pepperoni = self.noise_reduction(pepperoni,3,1)
+		pineapple = self.noise_reduction(pineapple,3,1)
+		anchovie = self.noise_reduction(anchovie,3,1)
+
+		#pineapple = self.hsv_filter(pineapple, [10,30,150], [30,128,225], True)
+
 		# Blob detection
-		pepperoni_img_poses = self.blob_detection(pepperoni, 300, 50, display=True)
+		pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=False)
+		pineapple_img_poses = self.blob_detection(pineapple, 20, 0, display=False)
+		anchovie_img_poses = self.blob_detection(anchovie, 20, 0, display=False)
+
 		# Find centroid/orientations
+
 
 	def adjust_gamma(self, image, gamma=1.0):
 	   table = np.array([((i / 255.0) ** (1.0 / gamma)) * 255 for i in np.arange(0, 256)]).astype("uint8")
