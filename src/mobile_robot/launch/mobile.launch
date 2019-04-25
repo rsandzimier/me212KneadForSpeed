@@ -1,0 +1,5 @@
+<launch>
+	<!-- Launch a map from the maps folder-->
+  	<arg name="map" default="$(find mobile_robot)/maps/stage.yaml"/>
+  	<node pkg="map_server" name="map_server" type="map_server" args="$(arg map)"/>
+</launch>
