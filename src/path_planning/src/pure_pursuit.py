@@ -17,10 +17,10 @@ class PurePursuit(object):
 	def __init__(self):
 		self.trajectory_topic = rospy.get_param("~trajectory_topic")
 		self.base_frame       = "base_link"
-		self.lookahead        = 1.5
+		self.lookahead        = .15
 		self.speed            = .3
 		self.wrap             = bool(rospy.get_param("~wrap"))
-		self.wheelbase_length = 0.450
+		self.wheelbase_length = 0.44
 		self.drive_topic      = "/cmdvel"
 		self.trajectory_set   = False
 		self.wheel_radius = 0.037
@@ -113,7 +113,7 @@ class PurePursuit(object):
 				self.send_commands(curvature, self.speed)
 			else:
 				self.send_commands(curvature, 0.0)
-		except tf.LookupException:
+		except:
 			pass
 
 	def send_commands(self, curvature, speed):

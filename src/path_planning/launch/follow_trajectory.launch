@@ -1,8 +1,8 @@
 <launch>
 	<arg name="sim" default="false"/>
-	<arg name="lookahead" default="1.5"/>
+	<arg name="lookahead" default=".15"/>
 	<arg name="max_reacquire" default="3.0"/>
-	<arg name="speed" default="1.5"/>
+	<arg name="speed" default=".25"/>
 
 	<group if="$(arg sim)">
 		<arg name="base_frame" default="base_link"/>
