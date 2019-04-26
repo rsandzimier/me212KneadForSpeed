@@ -4,7 +4,7 @@
 
 import math
 
-class IK_Solver():
+class IKSolver():
     def __init__(self):
         # Dimensions are in mm
         self.L = 304.8 # Length of link 1 (attached to motor)
