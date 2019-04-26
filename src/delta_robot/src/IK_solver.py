@@ -58,8 +58,8 @@ class IKSolver():
                 return [] # No solution
             t1 = (-F[i] + math.sqrt(E[i]**2 + F[i]**2 - G[i]**2))/(G[i]-E[i])
             t2 = (-F[i] - math.sqrt(E[i]**2 + F[i]**2 - G[i]**2))/(G[i]-E[i])
-            sol1 = math.atan(t1)
-            sol2 = math.atan(t2)
+            sol1 = 2*math.atan(t1)
+            sol2 = 2*math.atan(t2)
             solution[i] = sol1 if abs(sol1) < abs(sol2) else sol2 # Choose solution that is kinked "out"
 
         return solution # list of 3 motor joint angles 

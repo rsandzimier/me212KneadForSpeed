@@ -6,11 +6,11 @@ class WorkspaceChecker():
     def __init__(self):
         # Dimensions are in mm
         self.l = 762.0
-        self.xyz_min = [-330.2, -330.2, -635]
+        self.xyz_min = [-330.2, -330.2, -889]
         self.xyz_max = [ 330.2,  330.2,  0.0]
 
         self.maxtheta = math.pi/2
-        self.mintheta = -70*math.pi/180
+        self.mintheta = -68*math.pi/180 # 2 degrees offset from hard stop
         self.minphi = -18*math.pi/180
         self.maxphi = 18*math.pi/180
         self.gripper_center_x_offset = 0
@@ -31,6 +31,7 @@ class WorkspaceChecker():
         phi0 = math.asin(xend/self.l)
         phi1 = math.asin((-0.5*xend-math.sqrt(3)/2*yend)/self.l)
         phi2 = math.asin((-0.5*xend+math.sqrt(3)/2*yend)/self.l)
+
         if printMessages:
             print("phi values: " + str([phi0,phi1,phi2]))
             print("theta values: " + str(theta))
