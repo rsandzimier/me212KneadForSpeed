@@ -32,7 +32,7 @@ class InterfaceNode(tk.Frame):
 
 		self.deltasetxyz = [0,0,0]
 		self.setgripangle = 0
-		self.setfingerstate = 0
+		self.setfingerstate = tk.IntVar(parent)
 
 		#tk stuff
 		tk.Frame.__init__(self, parent);
@@ -88,7 +88,7 @@ class InterfaceNode(tk.Frame):
 		print self.deltasetxyz
 		self.setgripangle = float(self.entrya.get())
 		print self.setgripangle
-		print self.setfingerstate
+		print self.setfingerstate.get()
 
 	def get_state_cb(self,msg): # the _cb suffix stands for callback. Use this suffix on your callback functions for clarity
 		# This function is called every time another node publishes to the topic called "/arbitrary_subscribed_topic_name"
