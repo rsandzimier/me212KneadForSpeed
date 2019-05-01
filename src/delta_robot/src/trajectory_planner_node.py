@@ -23,9 +23,9 @@ class TrajectoryPlanner:
 	def __init__(self): 
 		self.rate = 100.0 #[Hz]
 
-        self.iksolver = IKSolver()
-        self.wschecker = WorkspaceChecker()
-        self.xyz_pos_init = [0.0,0.0,-714.66]
+		self.iksolver = IKSolver()
+		self.wschecker = WorkspaceChecker()
+		self.xyz_pos_init = [0.0,0.0,-714.66]
 		self.xyz_pos = [0.0,0.0,-714.66] # Initial position right after calibration (maybe make this more robust)
 		self.xyz_goal_pos = [0.0,0.0,-714.66]
 
@@ -156,7 +156,7 @@ class TrajectoryPlanner:
 		finished_task_msg.data = True
 		self.finished_task_pub.publish(finished_task_msg)
 
-	def generateMoveTo(self, xyz, orientation, gripper_open)
+	def generateMoveTo(self, xyz, orientation, gripper_open):
 		if self.running_trajectory:
 			print("Currently running a trajectory. Cannot call this function until goal position reached")
 			return
@@ -181,10 +181,10 @@ class TrajectoryPlanner:
 		t_ = [i*1./self.rate for i in (0,int(t_tot*self.rate))]
 
 		trajectory_msg = DeltaTrajectory()
-        joint_traj = []
-        gripper_traj = []
+		joint_traj = []
+		gripper_traj = []
 
-        for t in t_:
+		for t in t_:
 			j = JointPosition()
 			s = 0
 			if t < tr:
