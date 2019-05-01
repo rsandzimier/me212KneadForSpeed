@@ -1,1 +1,1 @@
-delta_robot/KFSPose[] poses
+KFSPose[] poses

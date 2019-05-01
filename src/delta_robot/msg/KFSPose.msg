@@ -1,3 +1,3 @@
-Point position
-Float64 orientation
-Bool open
+geometry_msgs/Point position
+float32 orientation
+bool open
