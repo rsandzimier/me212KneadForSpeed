@@ -15,8 +15,8 @@ from workspace_checker import WorkspaceChecker
 import numpy as np
 
 class TrajectoryPlanner: 
-	XYZ_VEL = 25.0
-	XYZ_ACCEL = 9800.0
+	XYZ_VEL = 200.0
+	XYZ_ACCEL = 4900.0
 
 	ZOFFSET = 50.0
 
@@ -167,18 +167,18 @@ class TrajectoryPlanner:
 		desired_open = gripper_open
 
 		xyz_initial = np.array(self.xyz_pos)
-		diff = desired_xyz - xyz
+		diff = desired_xyz - xyz_initial
 		d = np.linalg.norm(diff)
 
-		tr = XYZ_VEL/XYZ_ACCEL
-		tm = d/XYZ_VEL - tr
+		tr = self.XYZ_VEL/self.XYZ_ACCEL
+		tm = d/self.XYZ_VEL - tr
 		if tm < 0:
-			tr = math.sqrt(2*d/XYZ_ACCEL)
+			tr = math.sqrt(2*d/self.XYZ_ACCEL)
 			tm = 0
 
 		t_tot = tm + 2*tr
 
-		t_ = [i*1./self.rate for i in (0,int(t_tot*self.rate))]
+		t_ = [i*1./self.rate for i in range(0,int(t_tot*self.rate))]
 
 		trajectory_msg = DeltaTrajectory()
 		joint_traj = []
@@ -188,16 +188,16 @@ class TrajectoryPlanner:
 			j = JointPosition()
 			s = 0
 			if t < tr:
-				s = 0.5*XYZ_ACCEL*t**2
+				s = 0.5*self.XYZ_ACCEL*t**2
 			elif t < tr+tm:
-				s = 0.5*XYZ_ACCEL*tr**2 + (t - tr)*XYZ_VEL
+				s = 0.5*self.XYZ_ACCEL*tr**2 + (t - tr)*self.XYZ_VEL
 			else:
-				s = 0.5*XYZ_ACCEL*tr**2 + tm*XYZ_VEL + 0.5*XYZ_ACCEL*(tr**2 - (t - tm - 2*tr)**2)
+				s = 0.5*self.XYZ_ACCEL*tr**2 + tm*self.XYZ_VEL + 0.5*self.XYZ_ACCEL*(tr**2 - (t - tm - 2*tr)**2)
 			#Interpolates directly from A to B, no hopping motion
 			xyz_i = xyz_initial + diff*s/d
 			if self.wschecker.check(xyz_i):
 				# DO IK
-				j.data=self.iksolver.solve(xyz_i)
+				j.angles=self.iksolver.solve(xyz_i)
 			else: 
 				# print error 
 				print("error not in workspace")
