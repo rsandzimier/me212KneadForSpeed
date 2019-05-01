@@ -27,26 +27,33 @@ class TrajectoryPlanner:
         self.wschecker = WorkspaceChecker()
         self.xyz_pos_init = [0.0,0.0,-714.66]
 		self.xyz_pos = [0.0,0.0,-714.66] # Initial position right after calibration (maybe make this more robust)
+		self.xyz_goal_pos = [0.0,0.0,-714.66]
 
 		self.running_task = False
+		self.running_trajectory = False
 
 		rospy.Subscriber("/place_topping", KFSPoseArray, self.place_topping_cb)
 		rospy.Subscriber("/shake_salt", KFSPoseArray, self.shake_salt_cb)
 		rospy.Subscriber("/press_dough", KFSPoseArray, self.press_dough_cb)
 		rospy.Subscriber("/push_pizza", KFSPose, self.push_pizza_cb)
 		rospy.Subscriber("/move_to", KFSPose, self.move_to_cb)
-		rospy.Subscriber("/finished_trajectory",Bool, self.finished_move)
-		#rospy.Subscriber("/move_to", KFSPose, self.move_to_cb)
+		rospy.Subscriber("/finished_trajectory", Bool, self.finished_trajectory_cb)
 
 		self.finished_task_pub = rospy.Publisher("/finished_task", Bool, queue_size=10)
-		self.trajectory_pub = rospy.Publisher("/trajectory", DeltaTrajectory, self.trajectory_cb)
+		self.trajectory_pub = rospy.Publisher("/trajectory", DeltaTrajectory, queue_size=10)
 
-		rospy.Timer(rospy.Duration(1./self.rate), self.function_to_loop)
-
-	def finished_move(self, msg):
-		self.running_task = False
+	def finished_trajectory_cb(self, msg):
+		self.running_trajectory = not msg.data
+		if not self.running_trajectory:
+			self.xyz_pos = self.xyz_goal_pos
+		else:
+			print "Trajectory Follower published False for /finished_trajectory topic."
 
 	def place_topping_cb(self,msg):
+		if self.running_task:
+			print "Already working on a task"
+			return
+		self.running_task = True
 		print("Moving topping")
 		topping_xyz=[0,0,0]
 		topping_orientation=0
@@ -76,21 +83,42 @@ class TrajectoryPlanner:
 		above_dest_xyz[2]=msg.poses[1].position.z+self.ZOFFSET
 		above_dest_orientation=msg.poses[1].orientation
 
-		generateMoveTo(above_topping_xyz,above_topping_orientation,True)
-		generateMoveTo(topping_xyz,topping_orientation,True)
-		#directly publish to close gripper
-		generateMoveTo(above_topping_xyz,above_topping_orientation,False)
-		generateMoveTo(above_dest_xyz, above_dest_orientation, False)
-		generateMoveTo(dest_xyz, dest_orientation, False)
-		#directly publush to open
-		generateMoveTo(self.xyz_pos_init, 0, True)
+		self.generateMoveTo(above_topping_xyz,above_topping_orientation,True)
+		self.waitForTrajectoryToFinish()
+		self.generateMoveTo(topping_xyz,topping_orientation,True)
+		self.waitForTrajectoryToFinish()
+		self.generateMoveTo(above_topping_xyz,above_topping_orientation,False)
+		self.waitForTrajectoryToFinish()
+		self.generateMoveTo(above_dest_xyz, above_dest_orientation, False)
+		self.waitForTrajectoryToFinish()
+		self.generateMoveTo(dest_xyz, dest_orientation, False)
+		self.waitForTrajectoryToFinish()
+		self.generateMoveTo(self.xyz_pos_init, 0, True)
+		self.waitForTrajectoryToFinish()
 		print("Moved topping!")
+		self.running_task = False
+		finished_task_msg = Bool()
+		finished_task_msg.data = True
+		self.finished_task_pub.publish(finished_task_msg)
 
 	def shake_salt_cb(self,msg): 
+		if self.running_task:
+			print "Already working on a task"
+			return
+		self.running_task = True
 		pass
 	def press_dough_cb(self,msg): 
+		if self.running_task:
+			print "Already working on a task"
+			return
+		self.running_task = True
 		pass
 	def push_pizza_cb(self,msg):
+		if self.running_task:
+			print "Already working on a task"
+			return
+		self.running_task = True
+
 		XOFFSET = 200
 
 		dest_xyz=[0,0,0]
@@ -99,12 +127,21 @@ class TrajectoryPlanner:
 		dest_xyz[1]=msg.position.y
 		dest_xyz[2]=msg.position.z
 		dest_orientation=msg.orientation
-		generateMoveTo(topping_xyz,topping_orientation,False)
-
+		self.generateMoveTo(topping_xyz,topping_orientation,False)
+		self.waitForTrajectoryToFinish()
 		dest_xyz[0] = dest_xyz[0]-3*XOFFSET
-		generateMoveTo(topping_xyz,topping_orientation,False)
+		self.generateMoveTo(topping_xyz,topping_orientation,False)
+		self.waitForTrajectoryToFinish()
+		self.running_task = False
+		finished_task_msg = Bool()
+		finished_task_msg.data = True
+		self.finished_task_pub.publish(finished_task_msg)
 
 	def move_to_cb(self,msg): 
+		if self.running_task:
+			print "Already working on a task"
+			return
+		self.running_task = True
 		dest_xyz=[0,0,0]
 		dest_orientation=0
 		dest_xyz[0]=msg.position.x
@@ -112,21 +149,24 @@ class TrajectoryPlanner:
 		dest_xyz[2]=msg.position.z
 		dest_orientation=msg.orientation
 		dest_open = msg.open
-
-		generateMoveTo(topping_xyz,topping_orientation,dest_open)
+		self.generateMoveTo(topping_xyz,topping_orientation,dest_open)
+		self.waitForTrajectoryToFinish()
+		self.running_task = False
+		finished_task_msg = Bool()
+		finished_task_msg.data = True
+		self.finished_task_pub.publish(finished_task_msg)
 
 	def generateMoveTo(self, xyz, orientation, gripper_open)
-		if (self.running_task == True):
-			print("waiting for previous task to finish")
-			rospy.wait_for_message("/finished_trajectory", Bool)
-			self.running_task = False
+		if self.running_trajectory:
+			print("Currently running a trajectory. Cannot call this function until goal position reached")
+			return
 
 		self.running_task = True
 		desired_xyz = np.array(xyz)
 		desired_rot = orientation
 		desired_open = gripper_open
 
-		xyz = np.array(self.xyz_pos)
+		xyz_initial = np.array(self.xyz_pos)
 		diff = desired_xyz - xyz
 		d = np.linalg.norm(diff)
 
@@ -154,11 +194,10 @@ class TrajectoryPlanner:
 			else:
 				s = 0.5*XYZ_ACCEL*tr**2 + tm*XYZ_VEL + 0.5*XYZ_ACCEL*(tr**2 - (t - tm - 2*tr)**2)
 			#Interpolates directly from A to B, no hopping motion
-			xyz_i = xyz + diff*s/d
+			xyz_i = xyz_initial + diff*s/d
 			if self.wschecker.check(xyz_i):
 				# DO IK
 				j.data=self.iksolver.solve(xyz_i)
-				#set j.data =
 			else: 
 				# print error 
 				print("error not in workspace")
@@ -173,11 +212,13 @@ class TrajectoryPlanner:
 		trajectory_msg.joint_trajectory = joint_traj
 		trajectory_msg.gripper_trajectory = gripper_traj
 
+		self.running_trajectory = True
+		self.xyz_goal_pos = list(desired_xyz)
 		self.trajectory_pub.publish(trajectory_msg)
 
-
-
-
+	def waitForTrajectoryToFinish(self):
+		while self.running_trajectory or self.xyz_pos != self.xyz_goal_pos:
+			rospy.sleep(1/self.rate)
 
 if __name__ == "__main__":
 	rospy.init_node('trajectory_planner', anonymous=True) # Initialize the node
