@@ -10,8 +10,8 @@ from geometry_msgs.msg import Point
 from std_msgs.msg import Bool
 from std_msgs.msg import Float64
 from std_msgs.msg import Int32
-#from delta_robot.msg import DetectionArray
-#from delta_robot.msg import Detection
+from delta_robot.msg import DetectionArray
+from delta_robot.msg import Detection
 from delta_robot.msg import KFSPose
 from delta_robot.msg import KFSPoseArray
 
@@ -31,18 +31,18 @@ class TaskPlanner():
 		#self.delta_state_pub = rospy.Publisher("/arbitrary_published_topic_name", Float32MultiArray, queue_size=10)
 
 		#Subscribers
-		rospy.Subscriber("/finished_task",Bool,queue_size=10,self.finished_trajectory_cb)
-		rospy.Subscriber("/mobile_arrived", Bool, queue_size=10,self.mobile_arrived_cb)
+		rospy.Subscriber("/finished_task",Bool,self.finished_trajectory_cb)
+		rospy.Subscriber("/mobile_arrived", Bool,self.mobile_arrived_cb)
 		#rospy.Subscriber("/calibration_finished", Bool, queue_size=10, self.calibration_finished_cb)
 		#rospy.Subscriber("/initialized", Bool, queue_size=10, self.odrive_initialized_cb)
-		rospy.Subscriber("/toppings", DetectionArray, queue_size=10, self.detection_cb)
-		rospy.Subscriber("/slots", DetectionArray, queue_size=10, self.slot_detection_cb)
+		rospy.Subscriber("/toppings", DetectionArray, self.detection_cb)
+		rospy.Subscriber("/slots", DetectionArray, self.slot_detection_cb)
 
 		#publishers
 		self.move_topping_pub = rospy.Publisher("/place_topping", KFSPoseArray, queue_size=10)
 		self.push_pizza_pub = rospy.Publisher("/push_pizza", KFSPose, queue_size=10)
 		self.shaker_pub = rospy.Publisher("/shake_salt", KFSPoseArray, queue_size=10)
-		self.press_dough_pub = rospy.Publisher("/press_dough", KFSPoseArray)
+		self.press_dough_pub = rospy.Publisher("/press_dough", KFSPoseArray, queue_size=10)
 		#self.calibration_pub = rospy.Publisher("/start_calibration", Bool, queue_size=10)
 		self.mobile_ready_pub = rospy.Publisher("/pizza_loaded", Bool, queue_size=10)
 
@@ -54,6 +54,15 @@ class TaskPlanner():
 
 		# Set up timers. Parameters: t (time in seconds), function. Will call the specified function every t seconds until timer is killed or node is killed 
 		#rospy.Timer(rospy.Duration(1./self.rate), self.update_window)
+
+	def finished_trajectory_cb(self,msg):
+		pass
+	def mobile_arrived_cb(self,msg):
+		pass
+	def detection_cb(self,msg):
+		pass		
+	def slot_detection_cb(self,msg):
+		pass
 
 	def run_test_task(self):
 		pose1 = KFSPose()
@@ -69,12 +78,13 @@ class TaskPlanner():
 		pose2.orientation = 0.5
 
 		move_msg = KFSPoseArray()
-		move_msg.poses[0] = pose1
-		move_msg.poses[1] = pose2
+		move_msg.poses = []
+		move_msg.poses.append(pose1)
+		move_msg.poses.append(pose2)
 		self.move_topping_pub.publish(move_msg)
 
 
-	def bootstrap(self)
+	def bootstrap(self):
 		if (calibrated == False): #robot not started yet
 			rospy.Publisher("/initialize_motors", Bool, queue_size=10).publish(Bool())
 			rospy.wait_for_message("/initialized", Bool)
@@ -164,5 +174,5 @@ if __name__ == "__main__":
 	rospy.init_node('task_planner', anonymous=True) # Initialize the node
 	taskplanner = TaskPlanner()
 	taskplanner.run_test_task()
-	#rospy.spin() # Keeps python from exiting until the ROS node is stopped
+	rospy.spin() # Keeps python from exiting until the ROS node is stopped
 
