@@ -1,0 +1,22 @@
+<!-- -*- mode: XML -*- -->
+
+<launch>
+
+<!-- JOYSTICK nodes -->
+  <node respawn="true" pkg="joy"
+        type="joy_node" name="joy_node_right" >
+    <remap from="joy" to="joy_right" />
+    <rosparam command="load"
+              file="$(find delta_robot)/config/joy_param_right.yaml" />
+  </node>
+  <node pkg="joy" type="joy_node" name="joy_node_left" >
+    <remap from="joy" to="joy_left" />
+    <rosparam command="load"
+              file="$(find delta_robot)/config/joy_param_left.yaml" />
+  </node>
+  
+<!-- joystick controller node -->
+  <node pkg="delta_robot" type="joystick_controller.py"
+        name="Joystick_Controller" output="screen" />
+
+</launch>
