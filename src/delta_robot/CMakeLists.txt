@@ -52,6 +52,8 @@ add_message_files(
    GripperPosition.msg
    KFSPose.msg
    KFSPoseArray.msg
+   Detection.msg
+   DetectionArray.msg
 )
 
 ## Generate services in the 'srv' folder
