@@ -52,6 +52,8 @@ add_message_files(
    DeltaTrajectory.msg
    JointPosition.msg
    GripperPosition.msg
+   Detection.msg
+   DetectionArray.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -72,6 +74,7 @@ add_message_files(
 generate_messages(
    DEPENDENCIES
    std_msgs
+   geometry_msgs
  )
 
 ################################################

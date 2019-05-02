@@ -4,21 +4,23 @@ import rospy
 import math
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+from delta_robot.msg import Detection
+from delta_robot.msg import DetectionArray
 import cv2
 import numpy as np
 
+
 class CV:
-	def __init__(self): # This function is called one time as soon as an instance of a class is created
+	def __init__(self):
 		self.rate = 100 #[Hz]
 
-		rospy.Subscriber("/usb_cam/image_raw", Image, self.image_cb)
+		rospy.Subscriber("/usb_cam/image_raw", Image, self.image_cb) # Need to use rectified image instead
+
+		self.toppings_pub = rospy.Publisher("/toppings", DetectionArray, queue_size=10)
+		self.slots_pub = rospy.Publisher("/slots", DetectionArray, queue_size=10)
 
 		self.bridge = CvBridge()
 		self.image_dims = []
-
-		# Set up publishers for toppings and holes
-		#self.toppings_pub = rospy.Publisher("/toppings", , queue_size=10)
-		#self.holes_pub = rospy.Publisher("/holes", , queue_size=10)
 
 	def image_cb(self,msg):
 		try:
@@ -32,11 +34,14 @@ class CV:
 		# Gamma filter
 		cv_image = self.adjust_gamma(cv_image, 1.0)
 		# Position Segment (topping location vs pizza location)
+
 		# HSV Filter
 		pepperoni = self.hsv_filter(cv_image, [155,64,50], [175,180,125], True)
 		pineapple = self.hsv_filter(cv_image, [10,30,150], [30,128,225], True)
 		olive = self.hsv_filter(cv_image, [125,0,0], [175,60,75], True) # Needs work
 		anchovie = self.hsv_filter(cv_image, [100,30,64], [130,220,200], True) # Needs work
+		# Ham
+		# Open slot
 
 		cv2.imshow("HSV", olive)
 		cv2.waitKey(3)
@@ -44,16 +49,55 @@ class CV:
 		pepperoni = self.noise_reduction(pepperoni,3,1)
 		pineapple = self.noise_reduction(pineapple,3,1)
 		anchovie = self.noise_reduction(anchovie,3,1)
-
-		#pineapple = self.hsv_filter(pineapple, [10,30,150], [30,128,225], True)
+		# Olive
+		# Ham
+		# Open slot
 
 		# Blob detection
 		pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=False)
 		pineapple_img_poses = self.blob_detection(pineapple, 20, 0, display=False)
 		anchovie_img_poses = self.blob_detection(anchovie, 20, 0, display=False)
+		# Olive
+		# Ham
+		# Open slot
 
-		# Find centroid/orientations
+		topping_detections = []
 
+		for p in pepperoni_img_poses:
+			topping_detections.append(self.imgPose2CartesianPose(p,0))
+		#for p in olive_img_poses:
+		#	topping_detections.append(self.imgPose2CartesianPose(p,1))
+		#for p in ham_img_poses:
+		#	topping_detections.append(self.imgPose2CartesianPose(p,2))
+		for p in pineapple_img_poses:
+			topping_detections.append(self.imgPose2CartesianPose(p,3))
+		for p in anchovie_img_poses:
+			topping_detections.append(self.imgPose2CartesianPose(p,4))
+
+		slot_detections = []
+		#for p in slot_img_poses:
+		#	slot_detections.append(self.imgPose2CartesianPose(p,-1))
+
+		toppings_msg = DetectionArray()
+		toppings_msg.detections = topping_detections
+		self.toppings_pub.publish(toppings_msg)
+
+		slots_msg = DetectionArray()
+		slots_msg.detections = slot_detections
+		self.slots_pub.publish(slots_msg)
+
+	def imgPose2DetectionMsg(self, img_pose, detection_type):
+		# Takes in an image pose (x,y in pixels and orientation in radians) and outputs a detection message (x,y,z in mm, orientation in radians, and detection type)
+		# Type: 0-pepperoni, 1- olive, 2-ham, 3-pineapple, 4-anchovie, -1-open slot
+		d = Detection()
+		# Populate d with data x,y,z, and orientation are in cartesian space relative to the delta robot origin/coordinate system
+		d.type = detection_type
+		#d.position.x = 
+		#d.position.y = 
+		#d.position.z = 
+		#d.orientation = 
+		pass
+		return d
 
 	def adjust_gamma(self, image, gamma=1.0):
 	   table = np.array([((i / 255.0) ** (1.0 / gamma)) * 255 for i in np.arange(0, 256)]).astype("uint8")
