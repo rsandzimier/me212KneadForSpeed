@@ -3,6 +3,7 @@
 import rospy
 import math
 from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Bool
 import time
 
 class Calibration:
@@ -19,21 +20,21 @@ class Calibration:
 
         rospy.Subscriber("/joint_angles", Float32MultiArray, self.angle_cb)
         rospy.Subscriber("/joint_currents", Float32MultiArray, self.current_cb)
+        rospy.Subscriber("/start_calibration", Bool, self.start_calibration_cb)
 
         self.joint_commands_pub = rospy.Publisher("/joint_commands", Float32MultiArray, queue_size=10)
         self.calibration_offsets_pub = rospy.Publisher("/calibration_offsets", Float32MultiArray, queue_size=10)
+        self.finished_calibration_pub = rospy.Publisher("/finished_calibration", Bool, queue_size=10)
 
-        self.calibration_offsets = [0,0,0]
-        self.calibration_complete = [False, False, False]
-
-        self.joint_angles = []
-        self.joint_currents = []
-
-        self.joint_commands = []
-
-        self.initial_joint_angles = []
+        self.calibrating = False
+        self.resetVars()
 
         rospy.Timer(rospy.Duration(1./self.rate), self.update)
+
+    def start_calibration_cb(self, msg):
+        if msg.data and not self.calibrating:
+            self.resetVars()
+            self.calibrating = True
 
     def angle_cb(self,msg):
         self.joint_angles = list(msg.data)
@@ -50,18 +51,28 @@ class Calibration:
                 self.calibration_complete[i] = True
                 print "Motor " + str(i) + " Calibrated"
 
+    def resetVars(self):
+        self.calibration_offsets = [0,0,0]
+        self.calibration_complete = [False, False, False]
+        self.joint_angles = []
+        self.joint_currents = []
+        self.joint_commands = []
+        self.initial_joint_angles = []
+
     def update(self,event):
+        if not self.calibrating: return
         if len(self.joint_angles) == 0 or len(self.joint_currents) == 0: return
 
         if all(self.calibration_complete) and \
             abs(self.joint_angles[0] - self.TARGET_JOINT_POSITION - self.calibration_offsets[0]) < self.TARGET_POSITION_TOLERANCE and \
             abs(self.joint_angles[1] - self.TARGET_JOINT_POSITION - self.calibration_offsets[1]) < self.TARGET_POSITION_TOLERANCE and \
             abs(self.joint_angles[2] - self.TARGET_JOINT_POSITION - self.calibration_offsets[2]) < self.TARGET_POSITION_TOLERANCE:
+            self.calibrating = False
             calibration_offsets_msg = Float32MultiArray()
             calibration_offsets_msg.data = self.calibration_offsets
             self.calibration_offsets_pub.publish(calibration_offsets_msg)
+            self.finished_calibration_pub.publish(Bool(True))
             print "Calibration Complete"
-            rospy.signal_shutdown("Calibration Complete")
 
         joint_commands_msg = Float32MultiArray()
 

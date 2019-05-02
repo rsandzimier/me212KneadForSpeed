@@ -4,6 +4,7 @@ import rospy
 import math
 import motor
 from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Bool
 import odrive
 
 
@@ -17,6 +18,8 @@ class Odrive:
 
         self.joint_angles_pub = rospy.Publisher("/joint_angles", Float32MultiArray, queue_size=10)
         self.joint_currents_pub = rospy.Publisher("/joint_currents", Float32MultiArray, queue_size=10)
+        self.finished_initializing_pub = rospy.Publisher("/finished_initializing", Bool, queue_size=10)
+        rospy.sleep(0.5) # Sleep to give time for publishers to get setup
 
         print "Initializing motors"
         odrv0 = odrive.find_any(serial_number = "208637853548")
@@ -24,6 +27,7 @@ class Odrive:
         self.motor0 = motor.Motor(odrv0,0)
         self.motor1 = motor.Motor(odrv1,0)
         self.motor2 = motor.Motor(odrv1,1)
+        self.finished_initializing_pub.publish(Bool(True))
         print "Finished Initializing motors"
 
         rospy.Timer(rospy.Duration(1./self.rate), self.publish)
