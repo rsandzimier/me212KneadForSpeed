@@ -40,6 +40,7 @@ class TaskPlanner():
 
 		#publishers
 		self.move_topping_pub = rospy.Publisher("/place_topping", KFSPoseArray, queue_size=10)
+		self.move_to_pub = rospy.Publisher("/move_to", KFSPose, queue_size=10)
 		#self.push_pizza_pub = rospy.Publisher("/push_pizza", KFSPose, queue_size=10)
 		#self.shaker_pub = rospy.Publisher("/shake_salt", KFSPoseArray, queue_size=10)
 		#self.press_dough_pub = rospy.Publisher("/press_dough", KFSPoseArray, queue_size=10)
@@ -57,17 +58,20 @@ class TaskPlanner():
 	def finished_trajectory_cb(self,msg):
 		print "Finished Task"
 
+	#Table z=-774
+
+
 	def run_test_task(self):
 		pose1 = KFSPose()
 		pose1.position.x = -150
 		pose1.position.y = -150
-		pose1.position.z = -800
+		pose1.position.z = -770
 		pose1.orientation = -0.5
 
 		pose2 = KFSPose()
 		pose2.position.x = 150
 		pose2.position.y = 150
-		pose2.position.z = -720
+		pose2.position.z = -745
 		pose2.orientation = 0.5
 
 		move_msg = KFSPoseArray()
@@ -76,10 +80,40 @@ class TaskPlanner():
 		move_msg.poses.append(pose2)
 		self.move_topping_pub.publish(move_msg)
 
+	def run_test_task2(self):
+		'''pose1 = KFSPose()
+		pose1.position.x = 0
+		pose1.position.y = 0
+		pose1.position.z = -773
+		pose1.orientation = 0
+		pose1.open = True
+
+		self.move_to_pub.publish(pose1)
+		rospy.sleep(10)
+
+		pose1 = KFSPose()
+		pose1.position.x = 0
+		pose1.position.y = 0
+		pose1.position.z = -773
+		pose1.orientation = 0
+		pose1.open = False
+
+		self.move_to_pub.publish(pose1)
+		rospy.sleep(10)'''
+
+		pose2 = KFSPose()
+		pose2.position.x = 0
+		pose2.position.y = 0
+		pose2.position.z = -714
+		pose2.orientation = 0
+		pose2.open = False
+
+		self.move_to_pub.publish(pose2)
+
 if __name__ == "__main__":
 	rospy.init_node('task_planner', anonymous=True) # Initialize the node
 	taskplanner = TaskPlanner()
 	rospy.sleep(1)
-	taskplanner.run_test_task()
-	rospy.spin() # Keeps python from exiting until the ROS node is stopped
+	taskplanner.run_test_task2()
+	#rospy.spin() # Keeps python from exiting until the ROS node is stopped
 

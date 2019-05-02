@@ -15,7 +15,7 @@ from workspace_checker import WorkspaceChecker
 import numpy as np
 
 class TrajectoryPlanner: 
-	XYZ_VEL = 200.0
+	XYZ_VEL = 100.0
 	XYZ_ACCEL = 4900.0
 
 	ZOFFSET = 50.0
@@ -87,11 +87,15 @@ class TrajectoryPlanner:
 		self.waitForTrajectoryToFinish()
 		self.generateMoveTo(topping_xyz,topping_orientation,True)
 		self.waitForTrajectoryToFinish()
+		self.generateMoveTo(topping_xyz,topping_orientation,False)
+		self.waitForTrajectoryToFinish()
 		self.generateMoveTo(above_topping_xyz,above_topping_orientation,False)
 		self.waitForTrajectoryToFinish()
 		self.generateMoveTo(above_dest_xyz, above_dest_orientation, False)
 		self.waitForTrajectoryToFinish()
 		self.generateMoveTo(dest_xyz, dest_orientation, False)
+		self.waitForTrajectoryToFinish()
+		self.generateMoveTo(dest_xyz,dest_orientation,True)
 		self.waitForTrajectoryToFinish()
 		self.generateMoveTo(self.xyz_pos_init, 0, True)
 		self.waitForTrajectoryToFinish()
@@ -142,6 +146,7 @@ class TrajectoryPlanner:
 			print "Already working on a task"
 			return
 		self.running_task = True
+		print("Running move_to")
 		dest_xyz=[0,0,0]
 		dest_orientation=0
 		dest_xyz[0]=msg.position.x
@@ -149,7 +154,7 @@ class TrajectoryPlanner:
 		dest_xyz[2]=msg.position.z
 		dest_orientation=msg.orientation
 		dest_open = msg.open
-		self.generateMoveTo(topping_xyz,topping_orientation,dest_open)
+		self.generateMoveTo(dest_xyz,dest_orientation,dest_open)
 		self.waitForTrajectoryToFinish()
 		self.running_task = False
 		finished_task_msg = Bool()
@@ -194,7 +199,7 @@ class TrajectoryPlanner:
 			else:
 				s = 0.5*self.XYZ_ACCEL*tr**2 + tm*self.XYZ_VEL + 0.5*self.XYZ_ACCEL*(tr**2 - (t - tm - 2*tr)**2)
 			#Interpolates directly from A to B, no hopping motion
-			xyz_i = xyz_initial + diff*s/d
+			xyz_i = xyz_initial + diff*s/d if d != 0 else xyz_initial
 			if self.wschecker.check(xyz_i):
 				# DO IK
 				j.angles=self.iksolver.solve(xyz_i)
@@ -206,6 +211,21 @@ class TrajectoryPlanner:
 			g.open = gripper_open
 			g.angle = orientation
 			
+			joint_traj.append(j)
+			gripper_traj.append(g)
+
+		if len(joint_traj) == 0 and len(gripper_traj) == 0:
+			j = JointPosition()
+			if self.wschecker.check(xyz_initial):
+				# DO IK
+				j.angles=self.iksolver.solve(xyz_initial)
+			else: 
+				# print error 
+				print("error not in workspace")
+				return
+			g = GripperPosition()
+			g.open = gripper_open
+			g.angle = orientation
 			joint_traj.append(j)
 			gripper_traj.append(g)
 

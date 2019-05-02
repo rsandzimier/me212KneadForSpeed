@@ -79,10 +79,10 @@ class Gripper: # Class name capitalized
 	def update_spool_state_cb(self, msg):
 		#updates the spool motor state
 		if (self.gripperstate[0] == True):
-			if (msg.current_pos < self.SPOOL_CLOSED + self.THRESHOLD):
-				self.gripperstate[0] == False
+			if (msg.current_pos > self.SPOOL_CLOSED - self.THRESHOLD):
+				self.gripperstate[0] = False
 		elif (self.gripperstate[0] == False):
-			if (msg.current_pos > self.SPOOL_OPEN - self.THRESHOLD):
+			if (msg.current_pos < self.SPOOL_OPEN + self.THRESHOLD):
 				self.gripperstate[0] = True
 
 
