@@ -26,7 +26,7 @@ class TaskPlanner():
 	#[x position cm, y position cm, z position cm, gripper angle rad, gripper open (positive)]
 
 	def __init__(self): # This function is called one time as soon as an instance of a class is created
-		self.rate = 3 #[Hz]
+		self.rate = 2 #[Hz]
 
 		# Declaring a subscriber. Parameters: topic name (string), topic data type, callback function
 		# Every time another node publishes a message to "/arbitrary_subscribed_topic_name", we will call the function called self.arbitrary_topic_name_cb
@@ -70,8 +70,11 @@ class TaskPlanner():
 
 
 		# Set up timers. Parameters: t (time in seconds), function. Will call the specified function every t seconds until timer is killed or node is killed 
-		#rospy.Timer(rospy.Duration(1./self.rate), self.update_window)
+		rospy.Timer(rospy.Duration(1./self.rate), self.debug)
 
+	def debug(self, msg):
+		#print("debug message: ==================================")
+		print(self.topping_list)
 
 	def finished_task_cb(self,msg):
 		self.finished_task = True
@@ -80,6 +83,7 @@ class TaskPlanner():
 		self.mobile_arrived = True
 
 	def detection_cb(self,msg):
+		#print("Topping detections receieved")
 		if (self.topping_history.length >= self.MAX_HISTORY_LENGTH):
 			self.topping_history.pop(0) #pop the oldest item off the list
 		self.topping_history.append(msg.detections) #Add the newest item to the start of the list
@@ -108,15 +112,16 @@ class TaskPlanner():
 				j = j + 1
 			j = 0
 			i = i + 1
-		print(detected_toppings)
+		#print(detected_toppings)
 		i = 0
 		self.topping_list = []
-		while (i < length(detected_toppings)):
+		while (i < len(detected_toppings)):
 			#copy over the detection averages to the objects topping list
-			self.topping_list.append(detected_toppings[0])
+			if (detected_toppings[i][1] >= self.DETECTION_NUM_THRESHOLD): #If there were sufficient detections in the history to merit an average detection
+				self.topping_list.append(detected_toppings[i][0])
 			i = i + 1
 
-	def get_closest_match(detection, detection_array):
+	def get_closest_match(self, detection, detection_array):
 		i = 0
 		c = -1
 		min_dist = 9999999.0
@@ -137,7 +142,7 @@ class TaskPlanner():
 			return c #returns -1 when the detection array is empty
 
 
-	def average_out(detection, detection_array, index):
+	def average_out(self, detection, detection_array, index):
 		ave_pos = detection_array[index][0].position
 		weight = detection_array[index][1]
 
@@ -145,7 +150,7 @@ class TaskPlanner():
 		ave_pos.x = (weight*ave_pos.x + detection.position.x)/(weight + 1.0)
 		ave_pos.y = (weight*ave_pos.y + detection.position.y)/(weight + 1.0)
 		ave_pos.z = (weight*ave_pos.z + detection.position.z)/(weight + 1.0)
-		ave_pos.orientation = (weight*detection_array[index][0].orientation + detection.orientation)/(weight + 1.0)
+		detection_array[index][0].orientation = (weight*detection_array[index][0].orientation + detection.orientation)/(weight + 1.0)
 
 		#update the weight
 		detection_array[index][1] = weight + 1
@@ -198,15 +203,21 @@ class TaskPlanner():
 		#3 -- pineapple
 		#4 -- anchovy
 		#get toppings
+		t = 0
+		topping = None
 		for slot in self.slots:
-			topping = self.toppings.pop()
-			if (topping == None):
-				print("Out of toppings!")
+			if (t > 4):
+				print("Ran out of topping types!")
 				break
-			#get type
-			while (num_toppings[topping.type.get()] == 0):
-				topping = self.toppings.pop() #keep looking for toppings until we get one that we can put on
-			print("found topping at "+to_string(topping)+", placing in slot "+to_string(slot))
+			if (num_toppings[t] != 0):
+				topping = self.choose_topping_of_type(t)
+				if (topping == None):
+					print("No toppings of type "+str(t))
+					t = t + 1
+				num_toppings[t] = num_toppings[t] - 1
+			else:
+				t = t + 1
+				continue
 
 			move_msg = KFSPoseArray()
 			slot_pose = KFSPose()
@@ -222,7 +233,7 @@ class TaskPlanner():
 				print("Success!")
 			else:
 				print("Failed (no change in logic)")
-
+		print("Finished topping movement")
 
 
 		#Step 2: Wait for MR to come to position, then move pizza to MR
@@ -238,6 +249,18 @@ class TaskPlanner():
 			print("Failed to load MR")
 			self.mobile_ready_pub.publish(True) #send it off anyway
 		print("Done task!")
+
+	def choose_topping_of_type(self, t):
+		#returns the first instance (to be upgraded) of a topping of the numerical type supplied in the list
+		i = 0
+		topping = self.detected_toppings[i]
+		while (i < len(self.detected_toppings) - 1):
+			i = i + 1
+			topping = self.detected_toppings[i]
+			if (topping.type == t):
+				return topping
+		return None
+
 
 	def to_string(self, detection):
 		return str(detection.position.x)+","+str(detection.position.y)+","+str(detection.position.z)+","+str(detection.orientation)+","+str(detection.type)
