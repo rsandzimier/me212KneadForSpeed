@@ -14,8 +14,13 @@ from delta_robot.msg import DetectionArray
 from delta_robot.msg import Detection
 from delta_robot.msg import KFSPose
 from delta_robot.msg import KFSPoseArray
+from linked_list import *
 
-class TaskPlanner(): 
+class TaskPlanner():
+
+	MAX_HISTORY_LENGTH = 50 #maximum history depth
+	SQR_DISTANCE_THRESHOLD = 0.8 #maximum distance for a detection to be considered the same as another detection and merged
+	DETECTION_NUM_THRESHOLD = 20 #minimum number of detections in the last MAX_HISTORY_LENGTH for an object to be counted
 
 	#Format of pose:
 	#[x position cm, y position cm, z position cm, gripper angle rad, gripper open (positive)]
@@ -31,7 +36,7 @@ class TaskPlanner():
 		#self.delta_state_pub = rospy.Publisher("/arbitrary_published_topic_name", Float32MultiArray, queue_size=10)
 
 		#Subscribers
-		rospy.Subscriber("/finished_task",Bool,self.finished_trajectory_cb)
+		rospy.Subscriber("/finished_task",Bool,self.finished_task_cb)
 		rospy.Subscriber("/mobile_arrived", Bool,self.mobile_arrived_cb)
 		#rospy.Subscriber("/calibration_finished", Bool, queue_size=10, self.calibration_finished_cb)
 		#rospy.Subscriber("/initialized", Bool, queue_size=10, self.odrive_initialized_cb)
@@ -51,18 +56,102 @@ class TaskPlanner():
 		self.slots = None
 		self.pizza_center = None
 
+		#Variables for managing the location of detected objects
+		self.topping_history = LinkedList()
+		self.slot_history = LinkedList()
+		self.pizza_history = LinkedList()
+
+		self.topping_list = []
+		self.slot_list = []
+		self.pizza_pos = None
+
+		self.mobile_arrived = False
+		self.finished_task = True
+
 
 		# Set up timers. Parameters: t (time in seconds), function. Will call the specified function every t seconds until timer is killed or node is killed 
 		#rospy.Timer(rospy.Duration(1./self.rate), self.update_window)
 
-	def finished_trajectory_cb(self,msg):
-		pass
+
+	def finished_task_cb(self,msg):
+		self.finished_task = True
+
 	def mobile_arrived_cb(self,msg):
-		pass
+		self.mobile_arrived = True
+
 	def detection_cb(self,msg):
-		pass		
+		if (self.topping_history.length >= self.MAX_HISTORY_LENGTH):
+			self.topping_history.pop(0) #pop the oldest item off the list
+		self.topping_history.append(msg.detections) #Add the newest item to the start of the list
+		self.calculate_topping_averages()
+
 	def slot_detection_cb(self,msg):
-		pass
+		if (self.slot_history.length >= self.MAX_HISTORY_LENGTH):
+			self.slot_history.pop(0)
+		self.slot_history.append(msg.detections)
+		self.calculate_slot_averages()
+
+	def calculate_topping_averages(self):
+		#Amalgamates and builds a topping average position. Uses SQR_DISTANCE_THRESHOLD to differentiate between separate objects
+		detected_toppings = []
+		i = 0
+		j = 0
+		while (i < self.topping_history.length):
+			detection_list = self.topping_history.get(i)
+			while (j < len(detection_list)):
+				detect = detection_list[j]
+				closest = self.get_closest_match(detect, detected_toppings)
+				if (closest == -1): #item was not found in the list, so add it as new item with weight of 1
+					detected_toppings.append([detect, 1])
+				else: #Found an item in the list, average it in
+					self.average_out(detect, detected_toppings, closest) #taking advantage of mutability, no local reference update needed
+				j = j + 1
+			j = 0
+			i = i + 1
+		print(detected_toppings)
+		i = 0
+		self.topping_list = []
+		while (i < length(detected_toppings)):
+			#copy over the detection averages to the objects topping list
+			self.topping_list.append(detected_toppings[0])
+			i = i + 1
+
+	def get_closest_match(detection, detection_array):
+		i = 0
+		c = -1
+		min_dist = 9999999.0
+		pos1 = detection.position
+		while (i < len(detection_array)):
+			if (detection.type != detection_array[i][0].type): #objects are not the same type, ignore comparison
+				i = i + 1
+				continue
+			pos2 = detection_array[i][0].position
+			dist = self.sqrdist(pos1, pos2)
+			if (dist < min_dist):
+				min_dist = dist
+				c = i
+			i = i + 1
+		if min_dist > self.SQR_DISTANCE_THRESHOLD:
+			return -1
+		else:
+			return c #returns -1 when the detection array is empty
+
+
+	def average_out(detection, detection_array, index):
+		ave_pos = detection_array[index][0].position
+		weight = detection_array[index][1]
+
+		#mutability should update the positions automatically
+		ave_pos.x = (weight*ave_pos.x + detection.position.x)/(weight + 1.0)
+		ave_pos.y = (weight*ave_pos.y + detection.position.y)/(weight + 1.0)
+		ave_pos.z = (weight*ave_pos.z + detection.position.z)/(weight + 1.0)
+		ave_pos.orientation = (weight*detection_array[index][0].orientation + detection.orientation)/(weight + 1.0)
+
+		#update the weight
+		detection_array[index][1] = weight + 1
+
+
+
 
 	def run_test_task(self):
 		pose1 = KFSPose()
