@@ -43,7 +43,7 @@ class PurePursuit(object):
 			y = trans[1]
 			th = tf.transformations.euler_from_quaternion(rot)
 			self.pursue([x, y, th])
-		except tf.LookupException:
+		except :
 			print("lookup")
 
 	def trajectory_callback(self, msg):

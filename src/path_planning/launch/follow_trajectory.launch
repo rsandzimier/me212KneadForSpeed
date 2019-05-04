@@ -6,7 +6,7 @@
 
 	<group if="$(arg sim)">
 		<arg name="base_frame" default="base_link"/>
-		<node pkg="lab6" type="pure_pursuit.py" name="Trajectory_follower">
+		<node pkg="lab6" type="pure_pursuit.py" name="Trajectory_follower" output="screen">
 			<param name="odom_topic" value="$(arg base_frame)"/>		
 			<param name="trajectory_topic" value="/trajectory/current"/>
 			<param name="lookahead" value="$(arg lookahead)"/>

@@ -10,7 +10,7 @@ import threading
 import serial
 import tf.transformations as tfm
 
-from me212bot.msg import WheelCmdVel
+from mobile_robot.msg import WheelCmdVel
 from apriltags.msg import AprilTagDetections
 from helper import transformPose, pubFrame, cross2d, lookupTransform, pose2poselist, invPoselist, diffrad
 
@@ -51,7 +51,7 @@ def constant_vel_loop():
 def apriltag_callback(data):
     # use apriltag pose detection to find where is the robot
     for detection in data.detections:
-        if detection.id == 1:   # tag id is the correct one
+        if detection.id == 10:   # tag id is the correct one
             poselist_tag_cam = pose2poselist(detection.pose)
             poselist_tag_base = transformPose(lr, poselist_tag_cam, 'camera', 'robot_base')
             poselist_base_tag = invPoselist(poselist_tag_base)
@@ -73,7 +73,7 @@ def navi_loop():
     while not rospy.is_shutdown() :
         # 1. get robot pose
         robot_pose3d = lookupTransform(lr, '/map', '/robot_base')
-        
+        print robot_pose3d
         if robot_pose3d is None:
             print '1. Tag not in view, Stop'
             wcv.desiredWV_R = 0  # right, left
