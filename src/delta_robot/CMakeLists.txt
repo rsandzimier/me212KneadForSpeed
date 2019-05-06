@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_generation
+  sensor_msgs
 )
 
 find_package( OpenCV 2 REQUIRED )
@@ -75,6 +76,7 @@ generate_messages(
    DEPENDENCIES
    std_msgs
    geometry_msgs
+   sensor_msgs
  )
 
 ################################################

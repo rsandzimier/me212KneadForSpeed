@@ -30,7 +30,7 @@ class Motor:
         return self.axis.motor.current_control.Iq_measured
     
     def set_calibration(self, offset):
-        self.calibration_offset = offset
+        self.calibration_offset = self.calibration_offset + offset
 
     def rad2counts(self, angle):
         return -angle*self.COUNTS_PER_REV*self.GEAR_RATIO/(2*math.pi)
