@@ -16,6 +16,7 @@ class Motor:
         self.axis = self.odrv.axis0 if axis == 0 else self.odrv.axis1
         self.odrv.config.brake_resistance = 0
         self.axis.controller.config.control_mode = CTRL_MODE_POSITION_CONTROL
+
         self.axis.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
         self.calibration_offset = 0 # Radians
 
@@ -77,8 +78,8 @@ class Motor:
         self.axis.motor.config.calibration_current = 5
 
         #Set closed loop gains
-        kP_des = self.Nm2A*100 # pos_gain 2
-        kD_des = self.Nm2A*50  # vel_gain 0.0015 / 5
+        kP_des = 16*self.Nm2A*100 # 
+        kD_des = self.Nm2A*50  # 
 
         self.axis.controller.config.pos_gain = kP_des/kD_des #Convert to Cascaded Gain Structure
         #https://github.com/madcowswe/ODrive/blob/451e79519637fdcf33f220f7dae9a28b15e014ba/Firmware/MotorControl/controller.cpp#L151
