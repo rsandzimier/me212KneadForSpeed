@@ -26,7 +26,7 @@ class TaskPlanner():
 	#[x position cm, y position cm, z position cm, gripper angle rad, gripper open (positive)]
 
 	def __init__(self): # This function is called one time as soon as an instance of a class is created
-		self.rate = 2 #[Hz]
+		self.rate = 1 #[Hz]
 
 		# Declaring a subscriber. Parameters: topic name (string), topic data type, callback function
 		# Every time another node publishes a message to "/arbitrary_subscribed_topic_name", we will call the function called self.arbitrary_topic_name_cb
@@ -42,6 +42,11 @@ class TaskPlanner():
 		#rospy.Subscriber("/initialized", Bool, queue_size=10, self.odrive_initialized_cb)
 		rospy.Subscriber("/toppings", DetectionArray, self.detection_cb)
 		rospy.Subscriber("/slots", DetectionArray, self.slot_detection_cb)
+
+		#Subscribers for testing purposes=====================
+		rospy.Subscriber("/run_task", Bool, self.run_task)
+
+		#=====================================================
 
 		#publishers
 		self.move_topping_pub = rospy.Publisher("/place_topping", KFSPoseArray, queue_size=10)
@@ -68,13 +73,20 @@ class TaskPlanner():
 		self.mobile_arrived = False
 		self.finished_task = True
 
+		self.test_iter = -1
+
 
 		# Set up timers. Parameters: t (time in seconds), function. Will call the specified function every t seconds until timer is killed or node is killed 
 		rospy.Timer(rospy.Duration(1./self.rate), self.debug)
 
 	def debug(self, msg):
 		#print("debug message: ==================================")
+		'''print("Toppings: =========================")
 		print(self.topping_list)
+		print("Slots: =========================")
+		print(self.slot_list)
+		print("=======================\n===================")'''
+		pass
 
 	def finished_task_cb(self,msg):
 		self.finished_task = True
@@ -83,17 +95,43 @@ class TaskPlanner():
 		self.mobile_arrived = True
 
 	def detection_cb(self,msg):
-		#print("Topping detections receieved")
+		print("Topping detections receieved")
 		if (self.topping_history.length >= self.MAX_HISTORY_LENGTH):
 			self.topping_history.pop(0) #pop the oldest item off the list
 		self.topping_history.append(msg.detections) #Add the newest item to the start of the list
 		self.calculate_topping_averages()
 
 	def slot_detection_cb(self,msg):
+		print("Slot detections receieved")
 		if (self.slot_history.length >= self.MAX_HISTORY_LENGTH):
 			self.slot_history.pop(0)
 		self.slot_history.append(msg.detections)
 		self.calculate_slot_averages()
+
+	def calculate_slot_averages(self):
+		detected_slots = []
+		i = 0
+		j = 0
+		while (i < self.slot_history.length):
+			detection_list = self.slot_history.get(i)
+			while (j < len(detection_list)):
+				detect = detection_list[j]
+				closest = self.get_closest_match(detect, detected_slots)
+				if (closest == -1): #item was not found in the list, so add it as new item with weight of 1
+					detected_slots.append([detect, 1])
+				else: #Found an item in the list, average it in
+					self.average_out(detect, detected_slots, closest) #taking advantage of mutability, no local reference update needed
+				j = j + 1
+			j = 0
+			i = i + 1
+		#print(detected_toppings)
+		i = 0
+		self.slot_list = []
+		while (i < len(detected_slots)):
+			#copy over the detection averages to the objects topping list
+			if (detected_slots[i][1] >= self.DETECTION_NUM_THRESHOLD): #If there were sufficient detections in the history to merit an average detection
+				self.slot_list.append(detected_slots[i][0])
+			i = i + 1
 
 	def calculate_topping_averages(self):
 		#Amalgamates and builds a topping average position. Uses SQR_DISTANCE_THRESHOLD to differentiate between separate objects
@@ -157,7 +195,6 @@ class TaskPlanner():
 
 
 
-
 	def run_test_task(self):
 		pose1 = KFSPose()
 		pose1.position.x = -150
@@ -192,9 +229,16 @@ class TaskPlanner():
 		#Reads in the data from the camera and uses an average of object positions
 		pass
 
-	def run_task(self):
-		#Runs the entire delta robot task list
+	def choose_slot(self):
+		#Chooses a slot from the list. For now just choose the first one
+		if (self.test_iter >= len(self.slot_list) - 1):
+			return None
+		self.test_iter = self.test_iter + 1
+		return self.slot_list[self.test_iter]
 
+	def run_task(self, msg):
+		#Runs the entire delta robot task list
+		print("Running full pizza task...")
 		#Step 1: Move toppings to pizza
 		num_toppings = [2,2,2,2,1]
 		#0 -- pepperoni
@@ -205,7 +249,9 @@ class TaskPlanner():
 		#get toppings
 		t = 0
 		topping = None
-		for slot in self.slots:
+		print("Choosing toppings and slots")
+		slot = self.choose_slot()
+		while (slot != None):
 			if (t > 4):
 				print("Ran out of topping types!")
 				break
@@ -214,11 +260,14 @@ class TaskPlanner():
 				if (topping == None):
 					print("No toppings of type "+str(t))
 					t = t + 1
+					continue
 				num_toppings[t] = num_toppings[t] - 1
 			else:
+				print("No more toppings of type "+str(t)+" needed")
 				t = t + 1
 				continue
 
+			print("Moving topping...")
 			move_msg = KFSPoseArray()
 			slot_pose = KFSPose()
 			topping_pose = KFSPose()
@@ -229,10 +278,11 @@ class TaskPlanner():
 			move_msg.poses = [topping_pose, slot_pose]
 
 			self.move_topping_pub.publish(move_msg)
-			if (rospy.wait_for_message("/finished_trajectory", Bool).get() == True):
+			if (rospy.wait_for_message("/finished_trajectory", Bool).data == True):
 				print("Success!")
 			else:
 				print("Failed (no change in logic)")
+			slot = self.choose_slot()
 		print("Finished topping movement")
 
 
@@ -240,9 +290,16 @@ class TaskPlanner():
 		while (self.mobile_arrived == False):
 			print("No MR, waiting...")
 			rospy.sleep(1)
-
+		p = Point()
+		p.x = 0
+		p.y = 0
+		p.z = 0
+		self.pizza_center = KFSPose()
+		self.pizza_center.position = p
+		self.pizza_center.orientation = 0
+		self.pizza_center.open = False
 		self.push_pizza_pub.publish(self.pizza_center)
-		if (rospy.wait_for_message("/pizza_loaded", Bool).get() == True):
+		if (rospy.wait_for_message("/pizza_loaded", Bool).data == True):
 			print("MR loaded!")
 			self.mobile_ready_pub.publish(True)
 		else:
@@ -253,12 +310,12 @@ class TaskPlanner():
 	def choose_topping_of_type(self, t):
 		#returns the first instance (to be upgraded) of a topping of the numerical type supplied in the list
 		i = 0
-		topping = self.detected_toppings[i]
-		while (i < len(self.detected_toppings) - 1):
-			i = i + 1
-			topping = self.detected_toppings[i]
+		#topping = self.topping_list[i]
+		while (i < len(self.topping_list)):
+			topping = self.topping_list[i]
 			if (topping.type == t):
 				return topping
+			i = i + 1
 		return None
 
 
@@ -285,6 +342,6 @@ class TaskPlanner():
 if __name__ == "__main__":
 	rospy.init_node('task_planner', anonymous=True) # Initialize the node
 	taskplanner = TaskPlanner()
-	taskplanner.run_test_task()
+	#taskplanner.run_test_task()
 	rospy.spin() # Keeps python from exiting until the ROS node is stopped
 

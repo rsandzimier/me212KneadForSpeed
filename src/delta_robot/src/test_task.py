@@ -15,7 +15,7 @@ from delta_robot.msg import Detection
 from delta_robot.msg import KFSPose
 from delta_robot.msg import KFSPoseArray
 
-class TaskPlanner(): 
+class TestTask(): 
 
 	#Format of pose:
 	#[x position cm, y position cm, z position cm, gripper angle rad, gripper open (positive)]
@@ -47,6 +47,12 @@ class TaskPlanner():
 		#self.calibration_pub = rospy.Publisher("/start_calibration", Bool, queue_size=10)
 		#self.mobile_ready_pub = rospy.Publisher("/pizza_loaded", Bool, queue_size=10)
 		self.toppings_pub = rospy.Publisher("/toppings", DetectionArray, queue_size=10)
+		self.slots_pub = rospy.Publisher("/slots", DetectionArray, queue_size=10)
+
+		self.traj_fin_pub = rospy.Publisher("/finished_trajectory", Bool, queue_size=10)
+		self.rt_pub = rospy.Publisher("/run_task", Bool, queue_size=10)
+		self.ma_pub = rospy.Publisher("/mobile_arrived", Bool, queue_size=10)
+		self.pl_pub = rospy.Publisher("/pizza_loaded", Bool, queue_size=10)
 
 		self.calibrated = False
 		self.toppings = None
@@ -57,13 +63,34 @@ class TaskPlanner():
 
 
 		# Set up timers. Parameters: t (time in seconds), function. Will call the specified function every t seconds until timer is killed or node is killed 
-		rospy.Timer(rospy.Duration(1./self.rate), self.run_test_task_3)
+		#rospy.Timer(rospy.Duration(1./self.rate), self.run_test_task_3)
 	
 	def finished_task_cb(self,msg):
 		print "Finished Task"
 
 	#Table z=-774
-
+	def run_full_test(self):
+		print("Publishing locations repeatedly:")
+		for i in range(50):
+			self.run_test_task_3(None)
+			rospy.sleep(0.2)
+		print("Finished publishing repeat locations")
+		self.rt_pub.publish(True)
+		print("Enter 0 to fire a trajectory finished message, 1 to exit loop")
+		i = input()
+		while (i != 1):
+			print("sent finished message")
+			self.traj_fin_pub.publish(True)
+			i = input()
+		print("waiting to send MR arrived message (5 sec)")
+		rospy.sleep(5)
+		print("sending MR arrived message")
+		self.ma_pub.publish(True)
+		print("waiting to send pizza loaded message (2 sec)")
+		rospy.sleep(2)
+		print("sending pizza loaded message")
+		self.pl_pub.publish(True)
+		print("No more messages to send")
 
 	def run_test_task(self):
 		pose1 = KFSPose()
@@ -127,33 +154,43 @@ class TaskPlanner():
 
 	def run_test_task_3(self, extra):
 		#Create some detections for testing
-		d = [None]#,None,None,None,None,None,None,None,None,None,None,None,None,None,None]
+		d = [None,None,None,None,None,None,None,None,None,None,None,None,None,None,None]
 		d[0] = self.create_detection(self.x, self.x, -770.0, -0.5, 1)
-		'''d[1] = self.create_detection(-140.0, -150.0, -770.0, -0.3, 2)
+		d[1] = self.create_detection(-140.0, -150.0, -770.0, -0.3, 2)
 		d[2] = self.create_detection(-120.0, -150.0, -770.0, -0.1, 2)
 		d[3] = self.create_detection(-110.0, -150.0, -770.0, -0.4, 1)
 		d[4] = self.create_detection(-100.0, -150.0, -770.0, -0.4, 1)
 		d[5] = self.create_detection(-150.0, -140.0, -770.0, -0.5, 3)
-		d[6] = self.create_detection(-150.0, -130.0, -770.0, -0.5, 5)
+		d[6] = self.create_detection(-150.0, -130.0, -770.0, -0.5, 0)
 		d[7] = self.create_detection(-150.0, -120.0, -770.0, -0.3, 4)
 		d[8] = self.create_detection(-150.0, -110.0, -770.0, -0.5, 4)
 		d[9] = self.create_detection(-150.0, -100.0, -770.0, -0.1, 2)
 		d[10] = self.create_detection(-140.0, -140.0, -770.0, -0.0, 1)
 		d[11] = self.create_detection(-130.0, -130.0, -770.0, -0.0, 1)
 		d[12] = self.create_detection(-120.0, -120.0, -770.0, -0.1, 2)
-		d[13] = self.create_detection(-110.0, -110.0, -770.0, -0.2, 5)
-		d[14] = self.create_detection(-100, -100.0, -770.0, -0.4, 3)'''
-		self.x = self.x + 0.1
+		d[13] = self.create_detection(-110.0, -110.0, -770.0, -0.2, 0)
+		d[14] = self.create_detection(-100, -100.0, -770.0, -0.4, 3)
+		#self.x = self.x + 0.1
 		da = DetectionArray()
 		da.detections = d
 
+		s = [None, None, None]
+		s[0] = self.create_detection(150,140,-776,-0.5, 0)
+		s[1] = self.create_detection(150,110,-776,-0.5, 0)
+		s[2] = self.create_detection(-150,100,-776,-0.5, 0)
+
+		sa = DetectionArray()
+		sa.detections = s
+
 		self.toppings_pub.publish(da)
-		print("Published test topping positions")
+		self.slots_pub.publish(sa)
+		print("Published test topping and slot positions")
 
 if __name__ == "__main__":
 	rospy.init_node('task_planner', anonymous=True) # Initialize the node
-	taskplanner = TaskPlanner()
+	task = TestTask()
+	task.run_full_test()
 	#rospy.sleep(1)
 	#taskplanner.run_test_task2()
-	rospy.spin() # Keeps python from exiting until the ROS node is stopped
+	#rospy.spin() # Keeps python from exiting until the ROS node is stopped
 
