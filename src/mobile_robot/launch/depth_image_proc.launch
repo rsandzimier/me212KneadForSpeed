@@ -1,0 +1,9 @@
+<launch>
+
+	<node pkg="nodelet" type="nodelet" args="manager"
+		name="record_player_manager" output="screen"/>
+
+  	<node pkg="nodelet" type="nodelet" name="cloudify" output="screen">
+	  	args="load depth_image_proc/point_cloud_xyz manager --no-bond">
+	</node>
+</launch>

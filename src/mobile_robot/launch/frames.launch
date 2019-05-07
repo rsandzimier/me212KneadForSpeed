@@ -5,5 +5,5 @@
    <node name="tf_apriltag6_map" pkg="tf" type="static_transform_publisher" args="1.9 2.3470 .425 0.0 0.0 1.57 map apriltag6 10" />
 
    <node name="tf_apriltag3_map" pkg="tf" type="static_transform_publisher" args="1.477 0.3112 0.3397 4.71 0.0 1.57 map apriltag3 10" />
-   <node name="tf_camera_base" pkg="tf" type="static_transform_publisher" args="-0.24 0 0.35 -0.5 0.5 -0.5 0.5 robot_base camera 10" />
+   <node name="tf_camera_base" pkg="tf" type="static_transform_publisher" args="-0.24 0 0.35 -0.5 0.5 -0.5 0.5 base_link camera 10" />
 </launch>

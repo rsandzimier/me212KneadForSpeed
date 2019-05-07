@@ -25,6 +25,10 @@ class CV:
 
 		rospy.Subscriber("/camera/depth_registered/image", Image, self.depth_cb)
 
+		fx = 497.644645
+		fy = 496.090002		
+		self.theta = np.repeat(np.arctan2(np.linspace(-319,320,640),fx).reshape(1,-1),480,axis=0)
+		self.phi = np.repeat(np.arctan2(np.linspace(-239,240,480),fy).reshape(-1,1),640,axis=1)
 		#jank
 		#rospy.Subscriber("/reasonable_bob_location", Float32MultiArray, self.bob_cb)
 
@@ -103,84 +107,14 @@ class CV:
 		cv2.imshow("bob", merged_bob)
 		cv2.waitKey(3)	
 
-		# waiter = self.merge_blobs(bow_tie, pants, 15, 20, 120, False)
-		# cv2.imshow("merged_pants", cv2.bitwise_and(cv_image,cv_image,mask=waiter))
-		# cv2.waitKey(3)
-		# waiter = self.merge_blobs(waiter, tray, 50, 20, 50, False)
-		# cv2.imshow("merged_tray", cv2.bitwise_and(cv_image,cv_image,mask=waiter))
-		# cv2.waitKey(3)
-		# waiter = self.merge_blobs(waiter, skin, 50, 50, 50, False)
-		# cv2.imshow("merged_skin", cv2.bitwise_and(cv_image,cv_image,mask=waiter))
-		# cv2.waitKey(3)
-		# waiter = self.merge_blobs(waiter, hair, 50, 50, 70, False)
-		# cv2.imshow("merged_hair", cv2.bitwise_and(cv_image,cv_image,mask=waiter))
-		# cv2.waitKey(3)
+		depth_image = cv2.bitwise_and(self.depth_image,self.depth_image,mask = merged_bob_reduced)
+		#print self.pixelDepth2XYZ(depth_image)
+		depth_image[(np.isnan(depth_image)==True)] = 0
 
-		# # bow_tie_centroids = self.blob_detection(bow_tie, 25, 0, display=False)
-		# hair_centroids = self.blob_detection(hair, 100, 0 display=False)
-		# pants_centroids = self.blob_detection(pants, 100, 0, display=False)
-		# skin_centroids = self.blob_detection(skin, 100, 0, display=True)
-		# tray_centroids = self.blob_detection(tray, 100, 0, display=False)
-
-
-
-		#white_background_inv = cv2.bitwise_not(white_background)
-		#white_background_inv = self.noise_reduction(white_background_inv,5,1)
-
-		#cv2.imshow("HSV_non_white", white_background_inv)
-		#cv2.waitKey(3)
-		#self.blob_detection(white_background_inv, 0, 0, display=False)
-		# pineapple = self.noise_reduction(pineapple,3,1)
-		# anchovie = self.noise_reduction(anchovie,3,1)
-		# # Olive
-		# # Ham
-		# # Open slot
-
-		# # Blob detection
-		# pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=False)
-		# pineapple_img_poses = self.blob_detection(pineapple, 20, 0, display=False)
-		# anchovie_img_poses = self.blob_detection(anchovie, 20, 0, display=False)
-		# # Olive
-		# # Ham
-		# # Open slot
-
-		# topping_detections = []
-
-		# for p in pepperoni_img_poses:
-		# 	topping_detections.append(self.imgPose2CartesianPose(p,0))
-		# #for p in olive_img_poses:
-		# #	topping_detections.append(self.imgPose2CartesianPose(p,1))
-		# #for p in ham_img_poses:
-		# #	topping_detections.append(self.imgPose2CartesianPose(p,2))
-		# for p in pineapple_img_poses:
-		# 	topping_detections.append(self.imgPose2CartesianPose(p,3))
-		# for p in anchovie_img_poses:
-		# 	topping_detections.append(self.imgPose2CartesianPose(p,4))
-
-		# slot_detections = []
-		# #for p in slot_img_poses:
-		# #	slot_detections.append(self.imgPose2CartesianPose(p,-1))
-
-		# toppings_msg = DetectionArray()
-		# toppings_msg.detections = topping_detections
-		# self.toppings_pub.publish(toppings_msg)
-
-		# slots_msg = DetectionArray()
-		# slots_msg.detections = slot_detections
-		# self.slots_pub.publish(slots_msg)
 		self.rgb_image = None
 		self.depth_image = None
 
 	def filter_depth(self, depth_image, upper_depth, lower_depth):
-		# image is a np.array
-		#depth_mask is a np.array
-		#upper_depth, lower_Depth, float
-
-		# for i in range(image.shape[0]):
-		# 	for j in range(iamge.shape[1]):
-		# 		if image[i][j] == 1:
-		# 			if depth_mask[i][j] < lower_depth and depth_mask[i][j] > upper_depth:
-		# 				image[i][j] == 0
 		depth_mask = np.zeros_like(depth_image)
 		depth_image[(np.isnan(depth_image)==True)] = upper_depth+1
 		#ixs = np.where()
@@ -189,6 +123,17 @@ class CV:
 		depth_mask[(lower_depth<depth_image)&(depth_image<upper_depth)] = 255
 		depth_mask = depth_mask.astype('uint8')
 		return depth_mask
+
+	def pixelDepth2XYZ(self, depth_image):
+		x = depth_image*np.sin(self.theta)*np.cos(self.phi)
+		y = depth_image*np.cos(self.theta)*np.cos(self.phi)
+		z = depth_image*np.sin(self.phi)
+		pts = np.stack([x,y,z],axis=2).reshape((640*480,3))
+		pts = pts[pts!=[0,0,0]]
+		if pts.shape != (0,0):
+			return pts.reshape(-1,3)
+		else: 
+			return np.array([[]])
 
 	def adjust_gamma(self, image, gamma=1.0):
 	   table = np.array([((i / 255.0) ** (1.0 / gamma)) * 255 for i in np.arange(0, 256)]).astype("uint8")
