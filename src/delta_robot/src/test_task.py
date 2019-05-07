@@ -41,9 +41,9 @@ class TestTask():
 		#publishers
 		self.move_topping_pub = rospy.Publisher("/place_topping", KFSPoseArray, queue_size=10)
 		self.move_to_pub = rospy.Publisher("/move_to", KFSPose, queue_size=10)
-		#self.push_pizza_pub = rospy.Publisher("/push_pizza", KFSPose, queue_size=10)
-		#self.shaker_pub = rospy.Publisher("/shake_salt", KFSPoseArray, queue_size=10)
-		#self.press_dough_pub = rospy.Publisher("/press_dough", KFSPoseArray, queue_size=10)
+		self.push_pizza_pub = rospy.Publisher("/push_pizza", KFSPose, queue_size=10)
+		self.shaker_pub = rospy.Publisher("/shake_salt", KFSPoseArray, queue_size=10)
+		self.press_dough_pub = rospy.Publisher("/press_dough", KFSPoseArray, queue_size=10)
 		#self.calibration_pub = rospy.Publisher("/start_calibration", Bool, queue_size=10)
 		#self.mobile_ready_pub = rospy.Publisher("/pizza_loaded", Bool, queue_size=10)
 		self.toppings_pub = rospy.Publisher("/toppings", DetectionArray, queue_size=10)
@@ -92,24 +92,83 @@ class TestTask():
 		self.pl_pub.publish(True)
 		print("No more messages to send")
 
-	def run_test_task(self):
+	def test_traj_planner(self):
+		print("Testing move topping")
 		pose1 = KFSPose()
 		pose1.position.x = -150
 		pose1.position.y = -150
-		pose1.position.z = -770
-		pose1.orientation = -0.5
+		pose1.position.z = -769
+		pose1.orientation = -0.0
 
 		pose2 = KFSPose()
-		pose2.position.x = 150
-		pose2.position.y = 150
-		pose2.position.z = -745
-		pose2.orientation = 0.5
+		pose2.position.x = 25
+		pose2.position.y = -15
+		pose2.position.z = -750
+		pose2.orientation = 0.0
 
 		move_msg = KFSPoseArray()
 		move_msg.poses = []
 		move_msg.poses.append(pose1)
 		move_msg.poses.append(pose2)
 		self.move_topping_pub.publish(move_msg)
+
+		input("Press any key to continue...")
+
+		print("Testing press dough")
+		pose1.position.x = 150
+		pose1.position.y = -150
+		pose1.position.z = -767
+		pose1.orientation = -0.0
+
+		pose2.position.x = 20
+		pose2.position.y = -220
+		pose2.position.z = -762
+		pose2.orientation = 0.0
+
+		move_msg = KFSPoseArray()
+		move_msg.poses = []
+		move_msg.poses.append(pose1)
+		move_msg.poses.append(pose2)
+		self.press_dough_pub.publish(move_msg)
+		input("Press any key to continue")
+
+		print("testing push pizza")
+		pose2 = KFSPose()
+		pose2.position.x = 0
+		pose2.position.y = 0
+		pose2.position.z = -760
+		pose2.orientation = 0.0
+		self.push_pizza_pub.publish(pose2)
+		input("press any key to continue")
+
+		print("testing shake salt")
+		pose1 = KFSPose()
+		pose1.position.x = -150
+		pose1.position.y = 150
+		pose1.position.z = -767
+		pose1.orientation = 0.0
+
+		pose2.position.x = 0
+		pose2.position.y = 0
+		pose2.position.z = -720
+		pose2.orientation = 0.0
+
+		move_msg = KFSPoseArray()
+		move_msg.poses = []
+		move_msg.poses.append(pose1)
+		move_msg.poses.append(pose2)
+		self.shaker_pub.publish(move_msg)
+		input("press any key to continue")
+
+		print("move to center")
+		pose2.position.x = 0
+		pose2.position.y = 0
+		pose2.position.z = -714.66
+		pose2.orientation = 0.0
+		pose2.open = False
+		self.move_to_pub.publish(pose2)
+		print("done!")
+
 
 	def run_test_task2(self):
 		'''pose1 = KFSPose()
@@ -189,8 +248,9 @@ class TestTask():
 if __name__ == "__main__":
 	rospy.init_node('task_planner', anonymous=True) # Initialize the node
 	task = TestTask()
-	task.run_full_test()
-	#rospy.sleep(1)
+	#task.run_full_test()
+	rospy.sleep(1)
 	#taskplanner.run_test_task2()
+	task.test_traj_planner()
 	#rospy.spin() # Keeps python from exiting until the ROS node is stopped
 

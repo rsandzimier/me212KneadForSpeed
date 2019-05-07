@@ -7,6 +7,7 @@
 import rospy
 import math
 import Tkinter as tk
+from delta_robot.msg import KFSPose
 #from std_msgs.msg import Float32MultiArray # A standard message type that allows you to use topics that publish float arrays See http://docs.ros.org/melodic/api/std_msgs/html/msg/Float32MultiArray.html
 # There are more standard messages (std_msgs.msg) available if needed. You can also create your own custom messages if needed.
 # You can also import your own python files you write (can help organize code if it is long and you want to break it up into multiple files)
@@ -68,7 +69,7 @@ class InterfaceNode(tk.Frame):
 		self.actgripc.grid(row=3, column=2)
 		self.submit.grid(row=4,column=1)
 
-
+		self.move_to_pub = rospy.Publisher("/move_to", KFSPose, queue_size=10)
 
 		#pack everything
 		#self.prompt.grid(side="top", fill="x");
@@ -90,6 +91,16 @@ class InterfaceNode(tk.Frame):
 		print self.setgripangle
 		print self.setfingerstate.get()
 
+		move = KFSPose()
+		move.position.x = float(self.entryx.get())
+		move.position.y = float(self.entryy.get())
+		move.position.z = float(self.entryz.get())
+		move.orientation = float(self.entrya.get())
+		move.open = bool(self.setfingerstate.get())
+
+		self.move_to_pub.publish(move)
+
+
 	def get_state_cb(self,msg): # the _cb suffix stands for callback. Use this suffix on your callback functions for clarity
 		# This function is called every time another node publishes to the topic called "/arbitrary_subscribed_topic_name"
 		# msg is the message that was published to "/arbitrary_subscribed_topic_name"
@@ -99,11 +110,11 @@ class InterfaceNode(tk.Frame):
 
 	def update_window(self,event): # This is the function that we set a timer for above. 
 		#Update the values in the window
-		self.counter = self.counter + 1
-		self.deltaxyz[1] = self.counter
-		self.deltaxyz[0] = self.counter*2
-		self.deltaxyz[2] = self.counter*3+4
-		self.gripperangle = self.counter*7-21
+		#self.counter = self.counter + 1
+		self.deltaxyz[1] = 0#self.counter
+		self.deltaxyz[0] = 0#self.counter*2
+		self.deltaxyz[2] = 0#self.counter*3+4
+		self.gripperangle = 0#self.counter*7-21
 		#self.output.config(text=str(self.counter))
 
 		self.deltax.config(text="x="+str(self.deltaxyz[0]))
