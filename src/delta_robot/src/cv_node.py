@@ -2,6 +2,8 @@
 
 import rospy
 import math
+import tf
+from geometry_msgs.msg import PointStamped
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 from delta_robot.msg import Detection
@@ -9,11 +11,9 @@ from delta_robot.msg import DetectionArray
 import cv2
 import numpy as np
 
-
 class CV:
 	def __init__(self):
 		self.rate = 100 #[Hz]
-
 		rospy.Subscriber("/usb_cam/image_raw", Image, self.image_cb) # Need to use rectified image instead
 
 		self.toppings_pub = rospy.Publisher("/toppings", DetectionArray, queue_size=10)
@@ -21,6 +21,40 @@ class CV:
 
 		self.bridge = CvBridge()
 		self.image_dims = []
+
+
+		# Camera_Calibration Parameters
+		self.tf_listener = tf.TransformListener()
+		rospy.sleep(0.2)
+
+		self.tf_transformer = tf.TransformerROS(True, rospy.Duration(10.0))
+
+		self.sx = 1/642.5793848798857     #fx
+		self.sy = 1/644.8809875234275     #fy
+
+		self.cx = 320 #center of image in pixels
+		self.cy = 240  
+
+		self.pixelUV = [320,240] #initialize pixel coords and orientation for testing
+		self.pixelOrientation = math.radians(45)
+
+
+
+		self.CameraAngle = math.radians(10)  #angle of camera lens relative to vertical
+		self.CameraHeight = 839
+		self.z0 = 839/math.cos(self.CameraAngle)                   #851.942927372   absolute distance of camera lens from table in millimeters
+		self.CameraLenstoOrigin = [271 , 36.6 , 52] #in world frame
+
+		self.rotationMatrixX = np.array([[1,0,0], 
+		                                [0,math.cos(math.pi-self.CameraAngle),-math.sin(math.pi-self.CameraAngle)],
+		                                [0,math.sin(math.pi-self.CameraAngle),math.cos(math.pi-self.CameraAngle)]]) #rotation from world frame to camera frame -should just be a rotation about world x-axis
+		#Rotate 90 about z 
+		self.rotationMatrixZ = np.array([[0,1,0],
+		                                 [-1,0,0],
+		                                 [0,0,1]]) 
+		self.rotationMatrix = np.matmul(self.rotationMatrixZ,self.rotationMatrixX)  
+
+		self.translationVector = np.array([self.CameraLenstoOrigin[0],self.CameraLenstoOrigin[1],self.CameraLenstoOrigin[2]])        
 
 	def image_cb(self,msg):
 		try:
@@ -43,7 +77,7 @@ class CV:
 		# Ham
 		# Open slot
 
-		cv2.imshow("HSV", olive)
+		cv2.imshow("HSV", pepperoni)
 		cv2.waitKey(3)
 		# Noise reduction
 		pepperoni = self.noise_reduction(pepperoni,3,1)
@@ -54,7 +88,7 @@ class CV:
 		# Open slot
 
 		# Blob detection
-		pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=False)
+		pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=True)
 		pineapple_img_poses = self.blob_detection(pineapple, 20, 0, display=False)
 		anchovie_img_poses = self.blob_detection(anchovie, 20, 0, display=False)
 		# Olive
@@ -64,15 +98,15 @@ class CV:
 		topping_detections = []
 
 		for p in pepperoni_img_poses:
-			topping_detections.append(self.imgPose2CartesianPose(p,0))
+			topping_detections.append(self.imgPose2DetectionMsg(p,0))
 		#for p in olive_img_poses:
-		#	topping_detections.append(self.imgPose2CartesianPose(p,1))
+		#	topping_detections.append(self.imgPose2DetectionMsg(p,1))
 		#for p in ham_img_poses:
-		#	topping_detections.append(self.imgPose2CartesianPose(p,2))
-		for p in pineapple_img_poses:
-			topping_detections.append(self.imgPose2CartesianPose(p,3))
-		for p in anchovie_img_poses:
-			topping_detections.append(self.imgPose2CartesianPose(p,4))
+		#	topping_detections.append(self.imgPose2DetectionMsg(p,2))
+		#for p in pineapple_img_poses:
+		#	topping_detections.append(self.imgPose2DetectionMsg(p,3))
+		#for p in anchovie_img_poses:
+		#	topping_detections.append(self.imgPose2DetectionMsg(p,4))
 
 		slot_detections = []
 		#for p in slot_img_poses:
@@ -92,16 +126,17 @@ class CV:
 		d = Detection()
 		# Populate d with data x,y,z, and orientation are in cartesian space relative to the delta robot origin/coordinate system
 		d.type = detection_type
-		#d.position.x = 
-		#d.position.y = 
-		#d.position.z = 
+		pos = self.PixelXYToWorldXYZ(img_pose[0:2])
+		d.position.x = pos[0]
+		d.position.y = pos[1]
+		#d.position.z = pos[2]
 		#d.orientation = 
-		pass
+		print pos
 		return d
 
 	def adjust_gamma(self, image, gamma=1.0):
-	   table = np.array([((i / 255.0) ** (1.0 / gamma)) * 255 for i in np.arange(0, 256)]).astype("uint8")
-	   return cv2.LUT(image, table)
+		table = np.array([((i / 255.0) ** (1.0 / gamma)) * 255 for i in np.arange(0, 256)]).astype("uint8")
+		return cv2.LUT(image, table)
 
 	def hsv_filter(self, image, lower_hsv, upper_hsv, mask_only=True):
 		lower_hsv = np.array(lower_hsv)
@@ -175,6 +210,29 @@ class CV:
 		img = np.zeros(self.image_dims).astype('uint8')
 		cv2.drawContours(img, contours, -1, (255,255,255), cv2.FILLED)
 		return cv2.inRange(img, (127,127,127), (255,255,255))
+
+	def PixelXYToWorldXYZ(self,pixel):
+		pixelXY = [self.sx*(pixel[0] - self.cx) , -self.sy*(pixel[1] - self.cy)] #convert from pixel space to pixel X,Y frame
+		self.z = self.z0/(1+(math.tan(self.CameraAngle)*pixelXY[1]))
+		cameraXYZ = np.array([pixelXY[0]*self.z , pixelXY[1]*self.z , self.z]) #unproject pixel X,Y
+		p = PointStamped()
+		p.header.frame_id = "/delta_camera"
+		p.point.x = cameraXYZ[0]
+		p.point.y = cameraXYZ[1]
+		p.point.z = cameraXYZ[2]
+
+		#worldXYZ = np.matmul((self.rotationMatrix),np.transpose((cameraXYZ)))-self.translationVector#frame change
+		print self.tf_transformer
+		pworld = self.tf_transformer.transformPoint("/delta_robot", p)
+		worldXYZ = [pworld.point.x, pworld.point.y, pworld.point.z]
+		return worldXYZ
+
+	def PixelOrientationtoWorldOrientation(self,pixel):
+		pixel1 = self.PixelXYToWorldXYZ(pixel)
+		pixel2 = self.PixelXYToWorldXYZ(np.array(pixel) + 100*np.array([math.cos(self.pixelOrientation),math.sin(self.pixelOrientation)]))
+		self.worldOrientation = math.atan2(pixel2[1]-pixel1[1],pixel2[0]-pixel1[0])        
+
+		return self.worldOrientation
 
 
 if __name__ == "__main__":
