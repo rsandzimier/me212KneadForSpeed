@@ -4,6 +4,7 @@ import rospy
 import math
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+import tf
 import cv2
 import numpy as np
 from std_msgs.msg import Float32MultiArray
@@ -24,6 +25,8 @@ class CV:
 		rospy.Subscriber("/camera/rgb/image_rect_color/", Image, self.image_cb) # Need to use rectified image instead
 
 		rospy.Subscriber("/camera/depth_registered/image", Image, self.depth_cb)
+		self.br = tf.TransformBroadcaster()
+
 
 		fx = 497.644645
 		fy = 496.090002		
@@ -108,8 +111,13 @@ class CV:
 		cv2.waitKey(3)	
 
 		depth_image = cv2.bitwise_and(self.depth_image,self.depth_image,mask = merged_bob_reduced)
-		#print self.pixelDepth2XYZ(depth_image)
 		depth_image[(np.isnan(depth_image)==True)] = 0
+		centroid = self.depthImage2XYZ(depth_image)
+		print centroid
+		if centroid is not None:
+			self.br.sendTransform(centroid, (1,0,0,0),
+				rospy.get_rostime(),
+				"bob", "camera")
 
 		self.rgb_image = None
 		self.depth_image = None
@@ -124,16 +132,17 @@ class CV:
 		depth_mask = depth_mask.astype('uint8')
 		return depth_mask
 
-	def pixelDepth2XYZ(self, depth_image):
+	def depthImage2XYZ(self, depth_image):
 		x = depth_image*np.sin(self.theta)*np.cos(self.phi)
-		y = depth_image*np.cos(self.theta)*np.cos(self.phi)
-		z = depth_image*np.sin(self.phi)
+		z = depth_image*np.cos(self.theta)*np.cos(self.phi)
+		y = depth_image*np.sin(self.phi)
 		pts = np.stack([x,y,z],axis=2).reshape((640*480,3))
-		pts = pts[pts!=[0,0,0]]
-		if pts.shape != (0,0):
-			return pts.reshape(-1,3)
+		pts = pts[np.all(pts != 0, axis=1)]
+
+		if pts.shape[0] != 0:
+			return np.mean(pts,axis=0)
 		else: 
-			return np.array([[]])
+			return None
 
 	def adjust_gamma(self, image, gamma=1.0):
 	   table = np.array([((i / 255.0) ** (1.0 / gamma)) * 255 for i in np.arange(0, 256)]).astype("uint8")
