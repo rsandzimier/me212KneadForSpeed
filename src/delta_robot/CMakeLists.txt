@@ -53,6 +53,8 @@ add_message_files(
    DeltaTrajectory.msg
    JointPosition.msg
    GripperPosition.msg
+   KFSPose.msg
+   KFSPoseArray.msg
    Detection.msg
    DetectionArray.msg
 )

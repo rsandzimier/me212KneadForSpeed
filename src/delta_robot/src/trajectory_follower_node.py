@@ -75,7 +75,7 @@ class TrajectoryFollower:
         if abs(self.joint_angles[0] - self.joint_trajectory[-1].angles[0]) < self.TARGET_POSITION_TOLERANCE and \
             abs(self.joint_angles[1] - self.joint_trajectory[-1].angles[1]) < self.TARGET_POSITION_TOLERANCE and \
             abs(self.joint_angles[2] - self.joint_trajectory[-1].angles[2]) < self.TARGET_POSITION_TOLERANCE and \
-            abs(self.gripper_angle - self.gripper_trajectory[-1].angle) < self.TARGET_POSITION_TOLERANCE and \
+            abs(self.gripper_angle - self.gripper_trajectory[-1].angle)*0.1 < self.TARGET_POSITION_TOLERANCE and \
             self.gripper_open == self.gripper_trajectory[-1].open:
             return True
         return False

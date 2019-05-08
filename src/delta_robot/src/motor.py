@@ -22,6 +22,18 @@ class Motor:
 
     def set_angle(self, angle):
         self.axis.controller.pos_setpoint = self.rad2counts(angle + self.calibration_offset)
+        #self.trajMoveRad(angle+self.calibration_offset)
+    
+    def trajMoveCnt(self, posDesired = (10000, 10000, 10000), velDesired = 50000, accDesired = 50000):
+        #for ii in range(0,3):
+        #self.axis = axes[ii]
+        self.axis.trap_traj.config.vel_limit = velDesired #600000 max, 50000 is 1/8 rev per second
+        self.axis.trap_traj.config.accel_limit = accDesired #50000 is 1/8 rev per second per second
+        self.axis.trap_traj.config.decel_limit = accDesired
+        self.axis.controller.move_to_pos(10000) 
+
+    def trajMoveRad(self, posDesired = (0, 0, 0), velDesired = 2*math.pi/8, accDesired = 2*math.pi/8):
+        self.trajMoveCnt(self.rad2counts(posDesired),  self.rad2counts(velDesired),  self.rad2counts(accDesired))
     
     def get_angle(self):
         return self.counts2rad(self.axis.encoder.pos_estimate) - self.calibration_offset
