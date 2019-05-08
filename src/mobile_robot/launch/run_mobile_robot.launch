@@ -10,5 +10,5 @@
 	<!--<include file = "$(find lab6)/launch/load_trajectory.launch"/>-->
 	<!--<include file = "$(find lab6)/launch/follow_trajectory.launch"/>-->
   	<node pkg="mobile_robot" name="odometry_control" type="me212bot_node.py"/>
-  	<node pkg="mobile_robot" name="visual_localization" type="localizationAprilTag.py"/>
+  	<node pkg="mobile_robot" name="visual_localization" type="localizationAprilTag.py" output = "screen"/>
 </launch>
