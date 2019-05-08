@@ -21,8 +21,8 @@ class Motor:
         self.calibration_offset = 0 # Radians
 
     def set_angle(self, angle):
-        #self.axis.controller.pos_setpoint = self.rad2counts(angle + self.calibration_offset)
-        self.trajMoveRad(angle+self.calibration_offset)
+        self.axis.controller.pos_setpoint = self.rad2counts(angle + self.calibration_offset)
+        #self.trajMoveRad(angle+self.calibration_offset)
 
     def set_angle_hard(self, angle):
         self.axis.controller.pos_setpoint = self.rad2counts(angle + self.calibration_offset)

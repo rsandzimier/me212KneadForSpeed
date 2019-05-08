@@ -15,8 +15,8 @@ from workspace_checker import WorkspaceChecker
 import numpy as np
 
 class TrajectoryPlanner: 
-	XYZ_VEL = 600.0
-	XYZ_ACCEL = 4900.0
+	XYZ_VEL = 100.0
+	XYZ_ACCEL = 800.0
 	XYZ_VEL_FAST = 100.0
 	XYZ_ACCEL_FAST = 4900.0
 	pizzaradius=130.0
@@ -78,7 +78,7 @@ class TrajectoryPlanner:
 		dest_orientation=0
 		dest_xyz[0]=msg.poses[1].position.x
 		dest_xyz[1]=msg.poses[1].position.y
-		dest_xyz[2]=msg.poses[1].position.z
+		dest_xyz[2]=msg.poses[1].position.z+20
 		dest_orientation=msg.poses[1].orientation
 
 		above_dest_xyz=[0,0,0]

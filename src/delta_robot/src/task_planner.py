@@ -18,15 +18,17 @@ from linked_list import *
 
 class TaskPlanner():
 
-	MAX_HISTORY_LENGTH = 50 #maximum history depth
-	SQR_DISTANCE_THRESHOLD = 0.8 #maximum distance for a detection to be considered the same as another detection and merged
-	DETECTION_NUM_THRESHOLD = 20 #minimum number of detections in the last MAX_HISTORY_LENGTH for an object to be counted
+	DEBUG = False
 
+	MAX_HISTORY_LENGTH = 80 #maximum history depth
+	SQR_DISTANCE_THRESHOLD = 16 #maximum distance for a detection to be considered the same as another detection and merged
+	DETECTION_NUM_THRESHOLD = 30 #minimum number of detections in the last MAX_HISTORY_LENGTH for an object to be counted
+	DETECTION_NUM_LIMIT = 300 #Number of frames to listen to the camera initially
 	#Format of pose:
 	#[x position cm, y position cm, z position cm, gripper angle rad, gripper open (positive)]
 
 	def __init__(self): # This function is called one time as soon as an instance of a class is created
-		self.rate = 1 #[Hz]
+		self.rate = 0.5 #[Hz]
 
 		# Declaring a subscriber. Parameters: topic name (string), topic data type, callback function
 		# Every time another node publishes a message to "/arbitrary_subscribed_topic_name", we will call the function called self.arbitrary_topic_name_cb
@@ -75,18 +77,22 @@ class TaskPlanner():
 
 		self.test_iter = -1
 
+		self.using_camera_counter_t = 0
+		self.using_camera_counter_s = 0
+
 
 		# Set up timers. Parameters: t (time in seconds), function. Will call the specified function every t seconds until timer is killed or node is killed 
 		rospy.Timer(rospy.Duration(1./self.rate), self.debug)
 
 	def debug(self, msg):
 		#print("debug message: ==================================")
-		'''print("Toppings: =========================")
-		print(self.topping_list)
-		print("Slots: =========================")
-		print(self.slot_list)
-		print("=======================\n===================")'''
-		pass
+		if (self.DEBUG):
+			print("Toppings: =========================")
+			print(self.topping_list)
+			print("Slots: =========================")
+			print(self.slot_list)
+			print("=======================\n===================")
+		
 
 	def finished_task_cb(self,msg):
 		self.finished_task = True
@@ -95,18 +101,23 @@ class TaskPlanner():
 		self.mobile_arrived = True
 
 	def detection_cb(self,msg):
-		print("Topping detections receieved")
-		if (self.topping_history.length >= self.MAX_HISTORY_LENGTH):
-			self.topping_history.pop(0) #pop the oldest item off the list
-		self.topping_history.append(msg.detections) #Add the newest item to the start of the list
-		self.calculate_topping_averages()
+		#print("Topping detections receieved")
+		if (self.using_camera_counter_t < self.DETECTION_NUM_LIMIT):
+			if (self.topping_history.length >= self.MAX_HISTORY_LENGTH):
+				self.topping_history.pop(0) #pop the oldest item off the list
+			self.topping_history.append(msg.detections) #Add the newest item to the start of the list
+			self.calculate_topping_averages()
+			self.using_camera_counter_t += 1
+
 
 	def slot_detection_cb(self,msg):
-		print("Slot detections receieved")
-		if (self.slot_history.length >= self.MAX_HISTORY_LENGTH):
-			self.slot_history.pop(0)
-		self.slot_history.append(msg.detections)
-		self.calculate_slot_averages()
+		#print("Slot detections receieved")
+		if (self.using_camera_counter_s < self.DETECTION_NUM_LIMIT):
+			if (self.slot_history.length >= self.MAX_HISTORY_LENGTH):
+				self.slot_history.pop(0)
+			self.slot_history.append(msg.detections)
+			self.calculate_slot_averages()
+			self.using_camera_counter_s += 1
 
 	def calculate_slot_averages(self):
 		detected_slots = []
@@ -124,7 +135,7 @@ class TaskPlanner():
 				j = j + 1
 			j = 0
 			i = i + 1
-		#print(detected_toppings)
+		#print(detected_slots)
 		i = 0
 		self.slot_list = []
 		while (i < len(detected_slots)):
@@ -231,13 +242,23 @@ class TaskPlanner():
 
 	def choose_slot(self):
 		#Chooses a slot from the list. For now just choose the first one
-		if (self.test_iter >= len(self.slot_list) - 1):
+		#if (self.test_iter >= len(self.slot_list) - 1):
+		#	return None
+		#self.test_iter = self.test_iter + 1
+		#return self.slot_list[self.test_iter]
+		try:
+			return self.slot_list.pop()
+		except IndexError:
 			return None
-		self.test_iter = self.test_iter + 1
-		return self.slot_list[self.test_iter]
 
 	def run_task(self, msg):
 		#Runs the entire delta robot task list
+		print("Gathering data about toppings and slots")
+		self.using_camera_counter_t = 0
+		self.using_camera_counter_s = 0
+		while (self.using_camera_counter_s < self.DETECTION_NUM_LIMIT or self.using_camera_counter_t < self.DETECTION_NUM_LIMIT):
+			rospy.sleep(0.1)
+			print(str(self.using_camera_counter_t)+","+str(self.using_camera_counter_s)+'\r')
 		print("Running full pizza task...")
 		#Step 1: Move toppings to pizza
 		num_toppings = [2,2,2,2,1]
@@ -251,6 +272,8 @@ class TaskPlanner():
 		topping = None
 		print("Choosing toppings and slots")
 		slot = self.choose_slot()
+		if (slot == None):
+			print("No slots found!")
 		while (slot != None):
 			if (t > 4):
 				print("Ran out of topping types!")
@@ -278,33 +301,44 @@ class TaskPlanner():
 			move_msg.poses = [topping_pose, slot_pose]
 
 			self.move_topping_pub.publish(move_msg)
-			if (rospy.wait_for_message("/finished_trajectory", Bool).data == True):
+			if (rospy.wait_for_message("/finished_task", Bool).data == True):
 				print("Success!")
 			else:
 				print("Failed (no change in logic)")
 			slot = self.choose_slot()
 		print("Finished topping movement")
 
+		#shaker top half is about 47 mm off the ground, offset z by 37mm
+		print("getting pizza and shaker location")
+		pizza_pose = KFSPose()
+		shaker_pose=KFSPose()
+		shaker=self.choose_topping_of_type(5)
+		shaker_pose.position=shaker.position
+		shaker_pose.orientation=shaker.orientation
+		shaker_pose.position.z += 37.0
+		pizza=self.choose_topping_of_type(6)
+		pizza_pose.position=pizza.position
+		pizza_pose.orientation=pizza.orientation
+		move_msg = KFSPoseArray()
+		move_msg.poses = [shaker_pose, pizza_pose]
+		print("going to salt pizza")
+		self.shaker_pub.publish(move_msg)
+		rospy.wait_for_message("/finished_task", Bool)
+		print("salted pizza")
 
 		#Step 2: Wait for MR to come to position, then move pizza to MR
 		while (self.mobile_arrived == False):
 			print("No MR, waiting...")
 			rospy.sleep(1)
-		p = Point()
-		p.x = 0
-		p.y = 0
-		p.z = 0
-		self.pizza_center = KFSPose()
-		self.pizza_center.position = p
-		self.pizza_center.orientation = 0
-		self.pizza_center.open = False
-		self.push_pizza_pub.publish(self.pizza_center)
-		if (rospy.wait_for_message("/pizza_loaded", Bool).data == True):
+		
+		self.push_pizza_pub.publish(self.pizza_pose)
+		if (rospy.wait_for_message("/finished_task", Bool).data == True):
 			print("MR loaded!")
 			self.mobile_ready_pub.publish(True)
 		else:
 			print("Failed to load MR")
 			self.mobile_ready_pub.publish(True) #send it off anyway
+
 		print("Done task!")
 
 	def choose_topping_of_type(self, t):
@@ -312,9 +346,9 @@ class TaskPlanner():
 		i = 0
 		#topping = self.topping_list[i]
 		while (i < len(self.topping_list)):
-			topping = self.topping_list[i]
-			if (topping.type == t):
-				return topping
+			#topping = self.topping_list.pop(i)
+			if (self.topping_list[i].type == t):
+				return self.topping_list.pop(i)
 			i = i + 1
 		return None
 

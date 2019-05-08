@@ -17,11 +17,13 @@ from delta_robot.msg import KFSPoseArray
 
 class TestTask(): 
 
+	DEBUG = False
+
 	#Format of pose:
 	#[x position cm, y position cm, z position cm, gripper angle rad, gripper open (positive)]
 
 	def __init__(self): # This function is called one time as soon as an instance of a class is created
-		self.rate = 5 #[Hz]
+		self.rate = 20 #[Hz]
 
 		# Declaring a subscriber. Parameters: topic name (string), topic data type, callback function
 		# Every time another node publishes a message to "/arbitrary_subscribed_topic_name", we will call the function called self.arbitrary_topic_name_cb
@@ -63,7 +65,7 @@ class TestTask():
 
 
 		# Set up timers. Parameters: t (time in seconds), function. Will call the specified function every t seconds until timer is killed or node is killed 
-		#rospy.Timer(rospy.Duration(1./self.rate), self.run_test_task_3)
+		rospy.Timer(rospy.Duration(1./self.rate), self.feed_slot_detections)
 	
 	def finished_task_cb(self,msg):
 		print "Finished Task"
@@ -245,12 +247,25 @@ class TestTask():
 		self.slots_pub.publish(sa)
 		print("Published test topping and slot positions")
 
+	def feed_slot_detections(self, extra):
+		s = [None,None,None, None, None, None]
+		s[0] = self.create_detection(150,140,-776,0.0, -1)
+		s[1] = self.create_detection(150,100,-776,0.0, -1)
+		s[2] = self.create_detection(-150,100,-776,0.0, -1)
+		s[3] = self.create_detection(100,140,-776,0.0, -1)
+		s[4] = self.create_detection(110,100,-776,0.0, -1)
+		s[5] = self.create_detection(-120,-100,-776,0.0, -1)
+		sa = DetectionArray()
+		sa.detections = s
+		self.slots_pub.publish(sa)
+
+
 if __name__ == "__main__":
 	rospy.init_node('task_planner', anonymous=True) # Initialize the node
 	task = TestTask()
 	#task.run_full_test()
-	rospy.sleep(1)
+	#rospy.sleep(1)
 	#taskplanner.run_test_task2()
-	task.test_traj_planner()
-	#rospy.spin() # Keeps python from exiting until the ROS node is stopped
+	#task.test_traj_planner()
+	rospy.spin() # Keeps python from exiting until the ROS node is stopped
 

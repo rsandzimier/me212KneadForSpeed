@@ -36,8 +36,8 @@ class CV:
 		self.sx = 1/642.5793848798857     #fx
 		self.sy = 1/644.8809875234275     #fy
 
-		self.cx = 320 #center of image in pixels
-		self.cy = 240  
+		self.cx = 185 #center of image in pixels
+		self.cy = 230  
 
 		'''self.pixelUV = [320,240] #initialize pixel coords and orientation for testing
 		self.pixelOrientation = math.radians(45)'''
@@ -67,8 +67,8 @@ class CV:
 			print(e)
 		if len(self.image_dims) == 0:
 			self.image_dims = cv_image.shape
-		cv2.imshow("Image Window", cv_image)
-		cv_image = cv_image[40:415,135:560]
+		#cv2.imshow("Image Window", cv_image)
+		cv_image = cv_image[10:390,135:560]
 		cv2.imshow("Image Window Cropped", cv_image)
 		cv2.waitKey(3)
 
@@ -82,13 +82,15 @@ class CV:
 		olive = self.hsv_filter(cv_image, [100,47,0], [150,120,80], True) #Look good
 		anchovie = self.hsv_filter(cv_image, [110,75,48], [120,220,220], True) #All set
 		ham = self.hsv_filter(cv_image, [155, 128, 30], [175, 240, 255], True)#All set
+
+		saltshaker=self.hsv_filter(cv_image, [40, 30, 50], [100, 150, 150], True)
 		#Ham
 		#Gray Scale Image
 		#everything_gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
 		# Open slot
 		slot = self.hsv_filter(cv_image, [170,180,20],[20,255,150])
 
-		cv2.imshow("HSV", slot)
+		cv2.imshow("HSV", saltshaker)
 		cv2.waitKey(3)
 		# Noise reduction
 		pepperoni = self.noise_reduction(pepperoni,3,1)
@@ -99,6 +101,7 @@ class CV:
 		#cv2.imshow("HSV", olive)
 		# Ham
 		ham = self.noise_reduction(ham, 3, 1)
+		#saltshaker = self.noise_reduction(saltshaker ,3 ,1)
 		# Open slot
 
 		# Blob detection
@@ -107,18 +110,23 @@ class CV:
 		anchovie_img_poses = self.blob_detection(anchovie, 20, 0, display=False)
 		olive_img_poses = self.blob_detection(olive, 20, 0, display=False)
 		ham_img_poses = self.blob_detection(ham, 20, 0, display=False)
+		saltshaker_img_poses = self.blob_detection(saltshaker, 20, 0, display=True)
 		# Olive
 		#print(pepperoni_img_poses)
 		# Ham
 		# Open slot
-		pizza_circle = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 10, param2=14, minRadius = 50, maxRadius=58)
-		if (pizza_circle == None):
-			pizza_circle = []
+		pizza_circles = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 10, param2=14, minRadius = 64, maxRadius=82)
+		if (pizza_circles == None):
+			pizza_circles = []
 		else:
-			pizza_circle = pizza_circle[0]
+			pizza_circles = pizza_circles[0]
 		#print(pizza_circle)
 
-		slot_circles = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 16, param2=10, minRadius = 8, maxRadius = 16)[0]
+		slot_circles = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 16, param2=10, minRadius = 10, maxRadius = 18)
+		if (slot_circles == None):
+			slot_circles = []
+		else:
+			slot_circles = slot_circles[0]
 		#print(slot_circles)
 
 		#img = np.zeros(self.image_dims[0:2]).astype('uint8')
@@ -134,8 +142,8 @@ class CV:
 			#p1 = (int(x + l*math.cos(th)),int(y + l*math.sin(th)))
 			#p2 = (int(x - l*math.cos(th)),int(y - l*math.sin(th)))
 			#cv2.line(img, p1, p2, (0,0,255), thickness=2)
-		cv2.imshow("Blobs", img)
-		cv2.waitKey(3)'''
+		cv2.imshow("Blobs", img)'''
+		cv2.waitKey(3)
 
 
 
@@ -151,6 +159,10 @@ class CV:
 			topping_detections.append(self.imgPose2DetectionMsg(p,3))
 		for p in anchovie_img_poses:
 			topping_detections.append(self.imgPose2DetectionMsg(p,4))
+		for p in saltshaker_img_poses:
+			topping_detections.append(self.imgPose2DetectionMsg(p,5))
+		for p in pizza_circles:
+			topping_detections.append(self.imgPose2DetectionMsg(p,6))
 
 		slot_detections = []
 		for p in slot_circles:
@@ -160,9 +172,9 @@ class CV:
 		toppings_msg.detections = topping_detections
 		self.toppings_pub.publish(toppings_msg)
 
-		slots_msg = DetectionArray()
-		slots_msg.detections = slot_detections
-		self.slots_pub.publish(slots_msg)
+		#slots_msg = DetectionArray()
+		#slots_msg.detections = slot_detections
+		#self.slots_pub.publish(slots_msg)
 
 	def imgPose2DetectionMsg(self, img_pose, detection_type):
 		# Takes in an image pose (x,y in pixels and orientation in radians) and outputs a detection message (x,y,z in mm, orientation in radians, and detection type)
@@ -173,7 +185,7 @@ class CV:
 		pos = self.PixelXYToWorldXYZ(img_pose[0:2])
 		d.position.x = pos[0]
 		d.position.y = pos[1]
-		#d.position.z = pos[2]
+		d.position.z = pos[2]
 		#d.orientation = 
 		#print pos
 		return d
@@ -271,7 +283,7 @@ class CV:
 		p.point.z = cameraXYZ[2]/1000.0
 
 		#worldXYZ = np.matmul((self.rotationMatrix),np.transpose((cameraXYZ)))-self.translationVector#frame change
-		pworld = self.tf_listener.transformPoint("delta_robot", p)
+		pworld = self.tf_listener.transformPoint("gripper", p)
 		#print self.tf_listener.allFramesAsString()
 		worldXYZ = [pworld.point.x*1000, pworld.point.y*1000, pworld.point.z*1000]
 		return worldXYZ
