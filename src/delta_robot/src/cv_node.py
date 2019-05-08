@@ -78,7 +78,7 @@ class CV:
 
 		# HSV Filter
 		pepperoni = self.hsv_filter(cv_image, [155,64,50], [175,180,125], True)#All set
-		pineapple = self.hsv_filter(cv_image, [10,30,130], [30,128,225], True)#All set
+		pineapple = self.hsv_filter(cv_image, [15,30,130], [30,128,225], True)#All set
 		olive = self.hsv_filter(cv_image, [100,47,0], [150,120,80], True) #Look good
 		anchovie = self.hsv_filter(cv_image, [110,75,48], [120,220,220], True) #All set
 		ham = self.hsv_filter(cv_image, [155, 128, 30], [175, 240, 255], True)#All set
@@ -108,28 +108,53 @@ class CV:
 		olive_img_poses = self.blob_detection(olive, 20, 0, display=False)
 		ham_img_poses = self.blob_detection(ham, 20, 0, display=False)
 		# Olive
-		
+		#print(pepperoni_img_poses)
 		# Ham
 		# Open slot
-		slot_circles = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 10, param2=14, minRadius = 70)
-		print(slot_circles)
+		pizza_circle = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 10, param2=14, minRadius = 50, maxRadius=58)
+		if (pizza_circle == None):
+			pizza_circle = []
+		else:
+			pizza_circle = pizza_circle[0]
+		#print(pizza_circle)
+
+		slot_circles = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 16, param2=10, minRadius = 8, maxRadius = 16)[0]
+		#print(slot_circles)
+
+		#img = np.zeros(self.image_dims[0:2]).astype('uint8')
+		#img = cv2.bitwise_or(img, slot)
+		'''img = slot
+		img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+		for i in range(0,len(slot_circles)):
+			x = slot_circles[i][0]
+			y = slot_circles[i][1]
+			#th = blob_poses[i][2]
+			cv2.circle(img, (x,y), 5, (0,0,255),thickness=-1)
+			#l = 20
+			#p1 = (int(x + l*math.cos(th)),int(y + l*math.sin(th)))
+			#p2 = (int(x - l*math.cos(th)),int(y - l*math.sin(th)))
+			#cv2.line(img, p1, p2, (0,0,255), thickness=2)
+		cv2.imshow("Blobs", img)
+		cv2.waitKey(3)'''
+
+
 
 		topping_detections = []
 
-		#for p in pepperoni_img_poses:
-		#	topping_detections.append(self.imgPose2DetectionMsg(p,0))
-		#for p in olive_img_poses:
-		#	topping_detections.append(self.imgPose2DetectionMsg(p,1))
-		#for p in ham_img_poses:
-		#	topping_detections.append(self.imgPose2DetectionMsg(p,2))
-		#for p in pineapple_img_poses:
-		#	topping_detections.append(self.imgPose2DetectionMsg(p,3))
-		#for p in anchovie_img_poses:
-		#	topping_detections.append(self.imgPose2DetectionMsg(p,4))
+		for p in pepperoni_img_poses:
+			topping_detections.append(self.imgPose2DetectionMsg(p,0))
+		for p in olive_img_poses:
+			topping_detections.append(self.imgPose2DetectionMsg(p,1))
+		for p in ham_img_poses:
+			topping_detections.append(self.imgPose2DetectionMsg(p,2))
+		for p in pineapple_img_poses:
+			topping_detections.append(self.imgPose2DetectionMsg(p,3))
+		for p in anchovie_img_poses:
+			topping_detections.append(self.imgPose2DetectionMsg(p,4))
 
 		slot_detections = []
-		#for p in slot_img_poses:
-		#	slot_detections.append(self.imgPose2CartesianPose(p,-1))
+		for p in slot_circles:
+			slot_detections.append(self.imgPose2DetectionMsg(p,-1))
 
 		toppings_msg = DetectionArray()
 		toppings_msg.detections = topping_detections
@@ -150,7 +175,7 @@ class CV:
 		d.position.y = pos[1]
 		#d.position.z = pos[2]
 		#d.orientation = 
-		print pos
+		#print pos
 		return d
 
 	def adjust_gamma(self, image, gamma=1.0):
@@ -247,7 +272,7 @@ class CV:
 
 		#worldXYZ = np.matmul((self.rotationMatrix),np.transpose((cameraXYZ)))-self.translationVector#frame change
 		pworld = self.tf_listener.transformPoint("delta_robot", p)
-		print self.tf_listener.allFramesAsString()
+		#print self.tf_listener.allFramesAsString()
 		worldXYZ = [pworld.point.x*1000, pworld.point.y*1000, pworld.point.z*1000]
 		return worldXYZ
 
