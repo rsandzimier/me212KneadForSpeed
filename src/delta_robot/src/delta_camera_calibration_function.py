@@ -1,10 +1,10 @@
-git#!/usr/bin/python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""
+'''
 Created on Mon Apr 29 18:23:51 2019
 
 @author: lneil
-"""
+'''
 
 # A template to use for making a ROS node. Shows how to publish/subscribe to topics and how to structure the node as a class
 # This is not the only way, but for consistency across our team try not to deviate too far so we can all have an easier time reading each other's code

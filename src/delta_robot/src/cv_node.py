@@ -9,9 +9,13 @@ from cv_bridge import CvBridge, CvBridgeError
 from delta_robot.msg import Detection
 from delta_robot.msg import DetectionArray
 import cv2
+#import cv2.cv as cv
 import numpy as np
 
 class CV:
+
+	CAMERA_TILT = 10 #Also need to change rotation in frames.launch (in radians)
+
 	def __init__(self):
 		self.rate = 100 #[Hz]
 		rospy.Subscriber("/usb_cam/image_raw", Image, self.image_cb) # Need to use rectified image instead
@@ -35,12 +39,12 @@ class CV:
 		self.cx = 320 #center of image in pixels
 		self.cy = 240  
 
-		self.pixelUV = [320,240] #initialize pixel coords and orientation for testing
-		self.pixelOrientation = math.radians(45)
+		'''self.pixelUV = [320,240] #initialize pixel coords and orientation for testing
+		self.pixelOrientation = math.radians(45)'''
 
 
 
-		self.CameraAngle = math.radians(10)  #angle of camera lens relative to vertical
+		self.CameraAngle = math.radians(self.CAMERA_TILT)  #angle of camera lens relative to vertical
 		self.CameraHeight = 839
 		self.z0 = 839/math.cos(self.CameraAngle)                   #851.942927372   absolute distance of camera lens from table in millimeters
 		self.CameraLenstoOrigin = [271 , 36.6 , 52] #in world frame
@@ -64,41 +68,56 @@ class CV:
 		if len(self.image_dims) == 0:
 			self.image_dims = cv_image.shape
 		cv2.imshow("Image Window", cv_image)
+		cv_image = cv_image[40:415,135:560]
+		cv2.imshow("Image Window Cropped", cv_image)
 		cv2.waitKey(3)
+
 		# Gamma filter
 		cv_image = self.adjust_gamma(cv_image, 1.0)
 		# Position Segment (topping location vs pizza location)
 
 		# HSV Filter
-		pepperoni = self.hsv_filter(cv_image, [155,64,50], [175,180,125], True)
-		pineapple = self.hsv_filter(cv_image, [10,30,150], [30,128,225], True)
-		olive = self.hsv_filter(cv_image, [125,0,0], [175,60,75], True) # Needs work
-		anchovie = self.hsv_filter(cv_image, [100,30,64], [130,220,200], True) # Needs work
-		# Ham
+		pepperoni = self.hsv_filter(cv_image, [155,64,50], [175,180,125], True)#All set
+		pineapple = self.hsv_filter(cv_image, [10,30,130], [30,128,225], True)#All set
+		olive = self.hsv_filter(cv_image, [100,47,0], [150,120,80], True) #Look good
+		anchovie = self.hsv_filter(cv_image, [110,75,48], [120,220,220], True) #All set
+		ham = self.hsv_filter(cv_image, [155, 128, 30], [175, 240, 255], True)#All set
+		#Ham
+		#Gray Scale Image
+		#everything_gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
 		# Open slot
+		slot = self.hsv_filter(cv_image, [170,180,20],[20,255,150])
 
-		cv2.imshow("HSV", pepperoni)
+		cv2.imshow("HSV", slot)
 		cv2.waitKey(3)
 		# Noise reduction
 		pepperoni = self.noise_reduction(pepperoni,3,1)
 		pineapple = self.noise_reduction(pineapple,3,1)
 		anchovie = self.noise_reduction(anchovie,3,1)
 		# Olive
+		olive = self.olive_blob_fill(olive, 3, 5)#Fill the olive in, erode away the pepperoni shadows
+		#cv2.imshow("HSV", olive)
 		# Ham
+		ham = self.noise_reduction(ham, 3, 1)
 		# Open slot
 
 		# Blob detection
-		pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=True)
+		pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=False)
 		pineapple_img_poses = self.blob_detection(pineapple, 20, 0, display=False)
 		anchovie_img_poses = self.blob_detection(anchovie, 20, 0, display=False)
+		olive_img_poses = self.blob_detection(olive, 20, 0, display=False)
+		ham_img_poses = self.blob_detection(ham, 20, 0, display=False)
 		# Olive
+		
 		# Ham
 		# Open slot
+		slot_circles = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 10, param2=14, minRadius = 70)
+		print(slot_circles)
 
 		topping_detections = []
 
-		for p in pepperoni_img_poses:
-			topping_detections.append(self.imgPose2DetectionMsg(p,0))
+		#for p in pepperoni_img_poses:
+		#	topping_detections.append(self.imgPose2DetectionMsg(p,0))
 		#for p in olive_img_poses:
 		#	topping_detections.append(self.imgPose2DetectionMsg(p,1))
 		#for p in ham_img_poses:
@@ -160,6 +179,11 @@ class CV:
 		erosion = cv2.erode(image,kernel,iterations = iterations)
 		return cv2.dilate(erosion,kernel,iterations = iterations)
 
+	def olive_blob_fill(self, image, kernel_size=1, iterations=1):
+		kernel = np.ones((kernel_size,kernel_size),np.uint8)
+		dilation = cv2.dilate(image, kernel, iterations = iterations)
+		return cv2.erode(dilation, kernel, iterations = iterations+1)
+
 	def blob_detection(self, image, minArea, minDist, display=False):
 		# image must be binary
 		# Find contours in binary image and ignore any with area less than minArea
@@ -212,19 +236,19 @@ class CV:
 		return cv2.inRange(img, (127,127,127), (255,255,255))
 
 	def PixelXYToWorldXYZ(self,pixel):
-		pixelXY = [self.sx*(pixel[0] - self.cx) , -self.sy*(pixel[1] - self.cy)] #convert from pixel space to pixel X,Y frame
+		pixelXY = [self.sx*(pixel[0] - self.cx) , self.sy*(pixel[1] - self.cy)] #convert from pixel space to pixel X,Y frame
 		self.z = self.z0/(1+(math.tan(self.CameraAngle)*pixelXY[1]))
 		cameraXYZ = np.array([pixelXY[0]*self.z , pixelXY[1]*self.z , self.z]) #unproject pixel X,Y
 		p = PointStamped()
-		p.header.frame_id = "/delta_camera"
-		p.point.x = cameraXYZ[0]
-		p.point.y = cameraXYZ[1]
-		p.point.z = cameraXYZ[2]
+		p.header.frame_id = "delta_camera"
+		p.point.x = cameraXYZ[0]/1000.0
+		p.point.y = cameraXYZ[1]/1000.0
+		p.point.z = cameraXYZ[2]/1000.0
 
 		#worldXYZ = np.matmul((self.rotationMatrix),np.transpose((cameraXYZ)))-self.translationVector#frame change
-		print self.tf_transformer
-		pworld = self.tf_transformer.transformPoint("/delta_robot", p)
-		worldXYZ = [pworld.point.x, pworld.point.y, pworld.point.z]
+		pworld = self.tf_listener.transformPoint("delta_robot", p)
+		print self.tf_listener.allFramesAsString()
+		worldXYZ = [pworld.point.x*1000, pworld.point.y*1000, pworld.point.z*1000]
 		return worldXYZ
 
 	def PixelOrientationtoWorldOrientation(self,pixel):
