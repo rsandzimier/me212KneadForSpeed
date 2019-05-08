@@ -20,7 +20,7 @@ class Calibration:
         rospy.Subscriber("/joint_angles", Float32MultiArray, self.angle_cb)
         rospy.Subscriber("/joint_currents", Float32MultiArray, self.current_cb)
 
-        self.joint_commands_pub = rospy.Publisher("/joint_commands", Float32MultiArray, queue_size=10)
+        self.joint_commands_pub = rospy.Publisher("/calib_joint_commands", Float32MultiArray, queue_size=10)
         self.calibration_offsets_pub = rospy.Publisher("/calibration_offsets", Float32MultiArray, queue_size=10)
 
         self.calibration_offsets = [0,0,0]

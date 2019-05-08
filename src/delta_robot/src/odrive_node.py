@@ -13,6 +13,7 @@ class Odrive:
         self.rate = 100 #[Hz]
 
         rospy.Subscriber("/joint_commands", Float32MultiArray, self.angle_cb)
+        rospy.Subscriber("/calib_joint_commands", Float32MultiArray, self.calib_angle_cb)
         rospy.Subscriber("/calibration_offsets", Float32MultiArray, self.calibration_cb)
 
         self.joint_angles_pub = rospy.Publisher("/joint_angles", Float32MultiArray, queue_size=10)
@@ -32,6 +33,11 @@ class Odrive:
         self.motor0.set_angle(msg.data[0])
         self.motor1.set_angle(msg.data[1])
         self.motor2.set_angle(msg.data[2])
+
+    def calib_angle_cb(self, msg):
+        self.motor0.set_angle_hard(msg.data[0])
+        self.motor1.set_angle_hard(msg.data[1])
+        self.motor2.set_angle_hard(msg.data[2])
 
     def calibration_cb(self,msg):
         self.motor0.set_calibration(msg.data[0])

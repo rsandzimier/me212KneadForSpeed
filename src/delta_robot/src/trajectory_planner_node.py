@@ -15,7 +15,7 @@ from workspace_checker import WorkspaceChecker
 import numpy as np
 
 class TrajectoryPlanner: 
-	XYZ_VEL = 100.0
+	XYZ_VEL = 600.0
 	XYZ_ACCEL = 4900.0
 	XYZ_VEL_FAST = 100.0
 	XYZ_ACCEL_FAST = 4900.0
