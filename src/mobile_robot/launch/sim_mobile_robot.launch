@@ -1,0 +1,5 @@
+<launch>
+	<include file = "$(find mobile_robot)/launch/frames.launch"/>
+	<include file = "$(find mobile_robot)/launch/viz.launch"/>
+	<include file = "$(find mobile_robot)/launch/map.launch"/>
+</launch>

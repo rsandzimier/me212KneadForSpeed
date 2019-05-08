@@ -60,7 +60,7 @@ class PurePursuit(object):
 			return
 		print("pursue")
 		x, y, th = car_pos
-		point_found, carrot_pos = self.trajectory.find_drive_point(np.array([x, y]), self.lookahead)
+		point_found, carrot_pos, direction = self.trajectory.find_drive_point(np.array([x, y]), lookahead)
 		pose = Pose()
 		pose.position.x = carrot_pos[0]
 		pose.position.y = carrot_pos[1]
@@ -110,7 +110,7 @@ class PurePursuit(object):
 			carrot_y = trans[1]
 			curvature = 2 * carrot_y / self.lookahead**2
 			if point_found:
-				self.send_commands(curvature, self.speed)
+				self.send_commands(curvature, self.speed*direction)
 			else:
 				self.send_commands(curvature, 0.0)
 		except:
