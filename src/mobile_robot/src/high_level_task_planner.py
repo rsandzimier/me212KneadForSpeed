@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import tf
 import rospy
 import numpy as np
 from geometry_msgs.msg import PoseStamped, PointStamped, PolygonStamped, Point
@@ -23,9 +24,9 @@ class HighLevelTaskPlanner(object):
         self.trajectory_stop = LineTrajectory("/stop_trajectory")
 
         # list of (x, y)
-        self.delta_pts = [(1.93, 0.0), (2.01, 1.80)]
+        self.delta_pts = [(1.93, 0.0), (2.06, 1.80)]
         self.backup_pts = [(2.01, 1.80), (1.93, 0.7)]
-        self.waiter_pts = [(1.93, 0.7), (1.38, 1.42), (1.10, 2.16), (.70, 2.00), (.69, 1.45)]        
+        self.waiter_pts = [(1.93, 0.7), (1.75, 1.15),(1.38, 1.42), (1.10, 2.16), (.70, 2.00), (.69, 1.45)]        
         self.waiter_backup_pts = [(.69, 1.45), (.95, 2.07)]
         self.right_finish_pts = [(0.45, 1.95),(0.4,0.96),(0.74,0.95),(1.1,0.76), (0.96, 0.3),(-0.1, .551)]
 
@@ -60,6 +61,9 @@ class HighLevelTaskPlanner(object):
         self.mobile_arrived_pub = rospy.Publisher("/mobile_arrived", Bool, queue_size=10)
         self.publish_bob_pub = rospy.Publisher("/publish_bob", Bool, queue_size=10)
 
+        self.listener = tf.TransformListener()
+
+
 
         self.create_trajectory(self.trajectory_delta, self.delta_pts, self.delta_speed)
         self.create_trajectory(self.trajectory_backup, self.backup_pts, self.backup_speed)
@@ -79,7 +83,7 @@ class HighLevelTaskPlanner(object):
         self.planner()
                              
     def planner(self):
-        print "on step", self.current_traj_index
+        #print "on step", self.current_traj_index
         if self.current_traj_index == 0:
             # publish delta trajectory
             self.traj_pub.publish(self.trajectory_delta.toPolygon())
@@ -107,20 +111,25 @@ class HighLevelTaskPlanner(object):
             self.publish_bob_pub.publish(True)
             while self.path is None:
                 pass
-            if self.path == "right":
-                self.traj_pub.publish(self.trajectory_right_finish.toPolygon())
-            elif self.path == "left":
-                self.traj_pub.publish(self.trajectory_left_finish.toPolygon())
-            else:
-                print "self.path is not right or left", self.path
+            while self.current_traj_index == 4:
+                if self.path == "right":
+                    # print "trying to go",self.path
+                    self.traj_pub.publish(self.trajectory_right_finish.toPolygon())
+                elif self.path == "left":
+                    # print "trying to go",self.path
+                    self.traj_pub.publish(self.trajectory_left_finish.toPolygon())
+                else:
+                    pass
+                    #print "self.path is not right or left", self.path
 
-            try:
-                trans, rot = self.listener.lookupTransform('/map', "/base_link", rospy.Time(0))
-                if trans[0][2] < 0.54:
-                    self.current_traj_index += 1
-            except:
-                print("error in transformation")
-
+                try:
+                    trans, rot = self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
+                    print trans[1]
+                    if trans[1] < 1.70:
+                        self.current_traj_index += 1
+                except tf.LookupException:
+                    print("error in transformation")
+                rospy.sleep(0.03)
 
     def create_trajectory(self, traj, pts, speed):
         for x, y in pts:

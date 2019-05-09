@@ -69,7 +69,7 @@ class CV:
 
 		cv_image = cv2.bitwise_and(self.rgb_image,self.rgb_image,mask = depth_mask)
 
-		cv_image = self.adjust_gamma(cv_image, 1)
+		cv_image = self.adjust_gamma(cv_image, .7)
 
 		cv2.imshow("Image Window", cv_image)
 		cv2.waitKey(3)
@@ -118,40 +118,42 @@ class CV:
 		cv2.imshow("bob", merged_bob)
 		cv2.waitKey(3)	
 
-		if self.publish_bob:
+		if True:#self.publish_bob:
 			depth_image = cv2.bitwise_and(self.depth_image,self.depth_image,mask = merged_bob_reduced)
 			depth_image[(np.isnan(depth_image)==True)] = 0
-			centroid = self.depthImage2XYZ(depth_image)
-			print centroid
-			if centroid is not None:
-				self.br.sendTransform(centroid, (1,0,0,0),
-					rospy.get_rostime(),
-					"bob_noisy", "camera")
-				try:
-					map_bob_noisy = self.lr.lookupTransform("/map", "/bob_noisy",rospy.Time(0))
-					self.br.sendTransform(map_bob_noisy[0], map_bob_noisy[1],
+			print np.sum(depth_image)
+			if np.sum(depth_image) > 1000:
+				centroid = self.depthImage2XYZ(depth_image)
+				print centroid
+				if centroid is not None:
+					self.br.sendTransform(centroid, (1,0,0,0),
 						rospy.get_rostime(),
-						"bob", "bob_odom")
-					# waiter_pose_msg = PoseWithCovarianceStamped()
-					# waiter_pose_msg.pose.pose.position.x = map_bob_noisy[0][0]
-					# waiter_pose_msg.pose.pose.position.y = map_bob_noisy[0][1]
-					# waiter_pose_msg.pose.pose.position.z = map_bob_noisy[0][2]
-					# waiter_pose_msg.pose.pose.orientation.x = map_bob_noisy[1][0]
-					# waiter_pose_msg.pose.pose.orientation.y = map_bob_noisy[1][1]
-					# waiter_pose_msg.pose.pose.orientation.z = map_bob_noisy[1][2]
-					# waiter_pose_msg.pose.pose.orientation.w = map_bob_noisy[1][3]
-					# waiter_pose_msg.pose.covariance =  (1, 0, 0, 0, 0, 0,
-					# 									0, 0, 0, 0, 0, 0,
-					# 									0, 0, 0, 0, 0, 0,
-					# 									0, 0, 0, 0, 0, 0,
-					# 									0, 0, 0, 0, 0, 0,
-					# 									0, 0, 0, 0, 0, 0)
-					# waiter_pose_msg.header.frame_id = "bob_odom"
-					# waiter_pose_msg.header.stamp = rospy.get_rostime()
-					self.waiter_pose_pub.publish(map_bob_noisy[0][0])
+						"bob_noisy", "camera")
+					try:
+						map_bob_noisy = self.lr.lookupTransform("/map", "/bob_noisy",rospy.Time(0))
+						self.br.sendTransform(map_bob_noisy[0], map_bob_noisy[1],
+							rospy.get_rostime(),
+							"bob", "bob_odom")
+						# waiter_pose_msg = PoseWithCovarianceStamped()
+						# waiter_pose_msg.pose.pose.position.x = map_bob_noisy[0][0]
+						# waiter_pose_msg.pose.pose.position.y = map_bob_noisy[0][1]
+						# waiter_pose_msg.pose.pose.position.z = map_bob_noisy[0][2]
+						# waiter_pose_msg.pose.pose.orientation.x = map_bob_noisy[1][0]
+						# waiter_pose_msg.pose.pose.orientation.y = map_bob_noisy[1][1]
+						# waiter_pose_msg.pose.pose.orientation.z = map_bob_noisy[1][2]
+						# waiter_pose_msg.pose.pose.orientation.w = map_bob_noisy[1][3]
+						# waiter_pose_msg.pose.covariance =  (1, 0, 0, 0, 0, 0,
+						# 									0, 0, 0, 0, 0, 0,
+						# 									0, 0, 0, 0, 0, 0,
+						# 									0, 0, 0, 0, 0, 0,
+						# 									0, 0, 0, 0, 0, 0,
+						# 									0, 0, 0, 0, 0, 0)
+						# waiter_pose_msg.header.frame_id = "bob_odom"
+						# waiter_pose_msg.header.stamp = rospy.get_rostime()
+						self.waiter_pose_pub.publish(map_bob_noisy[0][0])
 
-				except:
-					print "lookup error"
+					except:
+						print "lookup error"
 
 
 		self.rgb_image = None
@@ -210,6 +212,14 @@ class CV:
 		img = np.zeros(self.image_dims).astype('uint8')
 		cv2.drawContours(img, contours, -1, (255,255,255), cv2.FILLED)
 		return cv2.inRange(img, (127,127,127), (255,255,255))
+
+	# def large_blobs(self, image, minArea):
+	# 	# image must be binary
+	# 	# Find contours in binary image and ignore any with area less than minArea
+	# 	im2, contours, hierarchy = cv2.findContours(image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+	# 	contours = [c for c in contours if cv2.contourArea(c) >= minArea]
+	# 	# Fill contours and dilate to merge any that are "close enough" (as defined by minDist)
+	# 	return self.fillContoursBinary(contours)
 
 
 if __name__ == "__main__":
