@@ -31,7 +31,8 @@ class deltaCameraAngle:
             if detection.id[0] == 10:   # tag id is the correct one
                 poselist_tag_cam = pose2poselist(detection.pose.pose.pose)
                 euler = tfm.euler_from_quaternion(poselist_tag_cam[3:7])
-                self.avg = (self.count*self.avg + euler[0])*1./(self.count+1)
+                print(euler)
+                self.avg = (self.count*self.avg + euler[1])*1./(self.count+1)
                 self.count += 1
         if self.count > 10:
             self.done = True
