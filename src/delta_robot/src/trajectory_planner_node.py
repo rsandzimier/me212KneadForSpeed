@@ -21,7 +21,7 @@ class TrajectoryPlanner:
 	XYZ_ACCEL_FAST = 4900.0
 	pizzaradius=130.0
 	shake_distance=10.0
-	ZOFFSET = 40.0
+	ZOFFSET = 60.0
 	MAX_PRESS_RADIUS = 85
 	NUM_SHAKES = 6
 
@@ -76,7 +76,7 @@ class TrajectoryPlanner:
 
 		dest_xyz=[0,0,0]
 		dest_orientation=0
-		dest_xyz[0]=msg.poses[1].position.x
+		dest_xyz[0]=msg.poses[1].position.x+10 #1cm offset for pizza
 		dest_xyz[1]=msg.poses[1].position.y
 		dest_xyz[2]=msg.poses[1].position.z+20
 		dest_orientation=msg.poses[1].orientation
@@ -117,15 +117,15 @@ class TrajectoryPlanner:
 		self.running_task = True
 		shaker_xyz=[0,0,0]
 		shaker_orientation=0
-		shaker_xyz[0]=msg.poses[0].position.x
-		shaker_xyz[1]=msg.poses[0].position.y
+		shaker_xyz[0]=msg.poses[0].position.x-10.0
+		shaker_xyz[1]=msg.poses[0].position.y+2.0
 		shaker_xyz[2]=msg.poses[0].position.z
 		shaker_orientation=msg.poses[0].orientation
 		
 		above_shaker_xyz=[0,0,0]
 		above_shaker_orientation=0
-		above_shaker_xyz[0]=msg.poses[0].position.x
-		above_shaker_xyz[1]=msg.poses[0].position.y
+		above_shaker_xyz[0]=msg.poses[0].position.x-10.0
+		above_shaker_xyz[1]=msg.poses[0].position.y+2.0
 		above_shaker_xyz[2]=msg.poses[0].position.z+self.ZOFFSET
 		above_shaker_orientation=msg.poses[0].orientation
 		
@@ -140,7 +140,7 @@ class TrajectoryPlanner:
 		above_dest_orientation=0
 		above_dest_xyz[0]=msg.poses[1].position.x
 		above_dest_xyz[1]=msg.poses[1].position.y
-		above_dest_xyz[2]=msg.poses[1].position.z+self.ZOFFSET
+		above_dest_xyz[2]=msg.poses[1].position.z+self.ZOFFSET+60.0
 		above_dest_orientation=msg.poses[1].orientation
 		
 		
@@ -149,14 +149,14 @@ class TrajectoryPlanner:
 		above_dest_orientation=0
 		above_dest_left_xyz[0]=msg.poses[1].position.x-self.shake_distance
 		above_dest_left_xyz[1]=msg.poses[1].position.y
-		above_dest_left_xyz[2]=msg.poses[1].position.z+self.ZOFFSET
+		above_dest_left_xyz[2]=msg.poses[1].position.z+self.ZOFFSET+60.0
 		above_dest_left_orientation=msg.poses[1].orientation
 
 		above_dest_right_xyz=[0,0,0]
 		above_dest_right_orientation=0
 		above_dest_right_xyz[0]=msg.poses[1].position.x+self.shake_distance
 		above_dest_right_xyz[1]=msg.poses[1].position.y
-		above_dest_right_xyz[2]=msg.poses[1].position.z+self.ZOFFSET
+		above_dest_right_xyz[2]=msg.poses[1].position.z+self.ZOFFSET+60.0
 		above_dest_right_orientation=msg.poses[1].orientation
 		
 		self.generateMoveTo(above_shaker_xyz,above_shaker_orientation,True)
@@ -296,18 +296,18 @@ class TrajectoryPlanner:
 		dest_xyz[0]=msg.position.x-self.pizzaradius
 		dest_xyz[1]=msg.position.y
 		dest_xyz[2]=msg.position.z
-		dest_orientation=msg.orientation
+		dest_orientation=0.6
 
 		above_dest_xyz = [0,0,0]
 		above_dest_xyz[0]=msg.position.x-self.pizzaradius
 		above_dest_xyz[1]=msg.position.y
 		above_dest_xyz[2]=msg.position.z+self.ZOFFSET
-		self.generateMoveTo(above_dest_xyz, 0, False)
+		self.generateMoveTo(above_dest_xyz, 0, True)
 		self.waitForTrajectoryToFinish()
-		self.generateMoveTo(dest_xyz,dest_orientation,False)
+		self.generateMoveTo(dest_xyz,dest_orientation,True)
 		self.waitForTrajectoryToFinish()
-		dest_xyz[0] = dest_xyz[0]+2.5*self.pizzaradius
-		self.generateMoveTo(dest_xyz,dest_orientation,False)
+		dest_xyz[0] = 215
+		self.generateMoveTo(dest_xyz,dest_orientation,True)
 		self.waitForTrajectoryToFinish()
 		print("Pushed Pizza!")
 		self.running_task = False

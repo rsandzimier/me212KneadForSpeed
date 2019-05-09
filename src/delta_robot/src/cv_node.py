@@ -65,10 +65,10 @@ class CV:
 			cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
 		except CvBridgeError as e:
 			print(e)
+		cv_image = cv_image[10:390,135:560]
 		if len(self.image_dims) == 0:
 			self.image_dims = cv_image.shape
 		#cv2.imshow("Image Window", cv_image)
-		cv_image = cv_image[10:390,135:560]
 		cv2.imshow("Image Window Cropped", cv_image)
 		cv2.waitKey(3)
 
@@ -81,7 +81,7 @@ class CV:
 		pineapple = self.hsv_filter(cv_image, [15,30,130], [30,128,225], True)#All set
 		olive = self.hsv_filter(cv_image, [100,47,0], [150,120,80], True) #Look good
 		anchovie = self.hsv_filter(cv_image, [110,75,48], [120,220,220], True) #All set
-		ham = self.hsv_filter(cv_image, [155, 128, 30], [175, 240, 255], True)#All set
+		ham = self.hsv_filter(cv_image, [150, 128, 30], [170, 240, 255], True)#All set
 
 		saltshaker=self.hsv_filter(cv_image, [40, 30, 50], [100, 150, 150], True)
 		#Ham
@@ -90,7 +90,7 @@ class CV:
 		# Open slot
 		slot = self.hsv_filter(cv_image, [170,180,20],[20,255,150])
 
-		cv2.imshow("HSV", saltshaker)
+		#cv2.imshow("HSV", saltshaker)
 		cv2.waitKey(3)
 		# Noise reduction
 		pepperoni = self.noise_reduction(pepperoni,3,1)
@@ -110,17 +110,20 @@ class CV:
 		anchovie_img_poses = self.blob_detection(anchovie, 20, 0, display=False)
 		olive_img_poses = self.blob_detection(olive, 20, 0, display=False)
 		ham_img_poses = self.blob_detection(ham, 20, 0, display=False)
-		saltshaker_img_poses = self.blob_detection(saltshaker, 20, 0, display=True)
+		saltshaker_img_poses = self.blob_detection(saltshaker, 20, 0, display=False)
 		# Olive
 		#print(pepperoni_img_poses)
 		# Ham
 		# Open slot
-		pizza_circles = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 10, param2=14, minRadius = 64, maxRadius=82)
+		slot0 = slot.copy()
+		slot = self.blob_min_area(slot, 3600)
+		slot = cv2.bitwise_and(slot, slot0)
+		pizza_circles = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 60, param2=12, minRadius = 61, maxRadius=75)
 		if (pizza_circles == None):
 			pizza_circles = []
 		else:
 			pizza_circles = pizza_circles[0]
-		#print(pizza_circle)
+		print(pizza_circles)
 
 		slot_circles = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 16, param2=10, minRadius = 10, maxRadius = 18)
 		if (slot_circles == None):
@@ -131,8 +134,8 @@ class CV:
 
 		#img = np.zeros(self.image_dims[0:2]).astype('uint8')
 		#img = cv2.bitwise_or(img, slot)
-		'''img = slot
-		img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+		img = slot
+		#img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 		for i in range(0,len(slot_circles)):
 			x = slot_circles[i][0]
 			y = slot_circles[i][1]
@@ -142,7 +145,7 @@ class CV:
 			#p1 = (int(x + l*math.cos(th)),int(y + l*math.sin(th)))
 			#p2 = (int(x - l*math.cos(th)),int(y - l*math.sin(th)))
 			#cv2.line(img, p1, p2, (0,0,255), thickness=2)
-		cv2.imshow("Blobs", img)'''
+		cv2.imshow("Blobs", img)
 		cv2.waitKey(3)
 
 
@@ -172,9 +175,9 @@ class CV:
 		toppings_msg.detections = topping_detections
 		self.toppings_pub.publish(toppings_msg)
 
-		#slots_msg = DetectionArray()
-		#slots_msg.detections = slot_detections
-		#self.slots_pub.publish(slots_msg)
+		slots_msg = DetectionArray()
+		slots_msg.detections = slot_detections
+		self.slots_pub.publish(slots_msg)
 
 	def imgPose2DetectionMsg(self, img_pose, detection_type):
 		# Takes in an image pose (x,y in pixels and orientation in radians) and outputs a detection message (x,y,z in mm, orientation in radians, and detection type)
@@ -266,6 +269,13 @@ class CV:
 			cv2.waitKey(3)
 
 		return blob_poses
+
+	def blob_min_area(self, image, minArea):
+		im2, contours, hierarchy = cv2.findContours(image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+		contours = [c for c in contours if cv2.contourArea(c) >= minArea]
+		# Fill contours and dilate to merge any that are "close enough" (as defined by minDist)
+		dilated = self.fillContoursBinary(contours)
+		return dilated
 
 	def fillContoursBinary(self, contours):
 		img = np.zeros(self.image_dims).astype('uint8')

@@ -20,10 +20,10 @@ class TaskPlanner():
 
 	DEBUG = False
 
-	MAX_HISTORY_LENGTH = 80 #maximum history depth
-	SQR_DISTANCE_THRESHOLD = 16 #maximum distance for a detection to be considered the same as another detection and merged
-	DETECTION_NUM_THRESHOLD = 30 #minimum number of detections in the last MAX_HISTORY_LENGTH for an object to be counted
-	DETECTION_NUM_LIMIT = 300 #Number of frames to listen to the camera initially
+	MAX_HISTORY_LENGTH = 100 #maximum history depth
+	SQR_DISTANCE_THRESHOLD = 25 #maximum distance for a detection to be considered the same as another detection and merged
+	DETECTION_NUM_THRESHOLD = 50 #minimum number of detections in the last MAX_HISTORY_LENGTH for an object to be counted
+	DETECTION_NUM_LIMIT = 100 #Number of frames to listen to the camera initially
 	#Format of pose:
 	#[x position cm, y position cm, z position cm, gripper angle rad, gripper open (positive)]
 
@@ -127,7 +127,7 @@ class TaskPlanner():
 			detection_list = self.slot_history.get(i)
 			while (j < len(detection_list)):
 				detect = detection_list[j]
-				closest = self.get_closest_match(detect, detected_slots)
+				closest = self.get_closest_match(detect, detected_slots, self.SQR_DISTANCE_THRESHOLD)
 				if (closest == -1): #item was not found in the list, so add it as new item with weight of 1
 					detected_slots.append([detect, 1])
 				else: #Found an item in the list, average it in
@@ -153,7 +153,10 @@ class TaskPlanner():
 			detection_list = self.topping_history.get(i)
 			while (j < len(detection_list)):
 				detect = detection_list[j]
-				closest = self.get_closest_match(detect, detected_toppings)
+				if (detect.type == 6):
+					closest = self.get_closest_match(detect, detected_toppings, 100)
+				else:
+					closest = self.get_closest_match(detect, detected_toppings, self.SQR_DISTANCE_THRESHOLD)
 				if (closest == -1): #item was not found in the list, so add it as new item with weight of 1
 					detected_toppings.append([detect, 1])
 				else: #Found an item in the list, average it in
@@ -170,7 +173,7 @@ class TaskPlanner():
 				self.topping_list.append(detected_toppings[i][0])
 			i = i + 1
 
-	def get_closest_match(self, detection, detection_array):
+	def get_closest_match(self, detection, detection_array, dist_thres):
 		i = 0
 		c = -1
 		min_dist = 9999999.0
@@ -185,7 +188,7 @@ class TaskPlanner():
 				min_dist = dist
 				c = i
 			i = i + 1
-		if min_dist > self.SQR_DISTANCE_THRESHOLD:
+		if min_dist > dist_thres:
 			return -1
 		else:
 			return c #returns -1 when the detection array is empty
@@ -259,8 +262,10 @@ class TaskPlanner():
 		while (self.using_camera_counter_s < self.DETECTION_NUM_LIMIT or self.using_camera_counter_t < self.DETECTION_NUM_LIMIT):
 			rospy.sleep(0.1)
 			print(str(self.using_camera_counter_t)+","+str(self.using_camera_counter_s)+'\r')
+		#print(self.choose_topping_of_type(6))
 		print("Running full pizza task...")
 		#Step 1: Move toppings to pizza
+		#return
 		num_toppings = [2,2,2,2,1]
 		#0 -- pepperoni
 		#1 -- olive
@@ -331,7 +336,7 @@ class TaskPlanner():
 			print("No MR, waiting...")
 			rospy.sleep(1)
 		
-		self.push_pizza_pub.publish(self.pizza_pose)
+		self.push_pizza_pub.publish(pizza_pose)
 		if (rospy.wait_for_message("/finished_task", Bool).data == True):
 			print("MR loaded!")
 			self.mobile_ready_pub.publish(True)
@@ -376,6 +381,6 @@ class TaskPlanner():
 if __name__ == "__main__":
 	rospy.init_node('task_planner', anonymous=True) # Initialize the node
 	taskplanner = TaskPlanner()
-	#taskplanner.run_test_task()
-	rospy.spin() # Keeps python from exiting until the ROS node is stopped
+	taskplanner.run_task(None)
+	#rospy.spin() # Keeps python from exiting until the ROS node is stopped
 
