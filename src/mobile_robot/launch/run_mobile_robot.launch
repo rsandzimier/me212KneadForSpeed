@@ -6,8 +6,8 @@
 		<arg name = "depth_registration" value ="true"/>
 	</include>
 	<include file = "$(find apriltags)/launch/apriltags.launch"/>
-	<!--<include file = "$(find mobile_robot)/launch/robot_pose_ekf.launch"/>-->
 	<include file = "$(find mobile_robot)/launch/ekf.launch"/>
+	<include file = "$(find mobile_robot)/launch/ekf_waiter.launch"/>
 	<!--<include file = "$(find lab6)/launch/load_trajectory.launch"/>-->
 	<!--<include file = "$(find lab6)/launch/follow_trajectory.launch"/>-->
   	<node pkg="mobile_robot" name="odometry_control" type="me212bot_node.py"/>

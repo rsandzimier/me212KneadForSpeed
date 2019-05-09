@@ -7,8 +7,8 @@ from cv_bridge import CvBridge, CvBridgeError
 import tf
 import cv2
 import numpy as np
-from std_msgs.msg import Float32MultiArray
-
+from std_msgs.msg import Float32MultiArray, Bool, Float32
+from geometry_msgs.msg import PoseWithCovarianceStamped
 
 class CV:
 	def __init__(self):
@@ -22,11 +22,17 @@ class CV:
 		self.rgb_image = None
 		self.depth_image = None
 
+		self.publish_bob = False
+
 		rospy.Subscriber("/camera/rgb/image_rect_color/", Image, self.image_cb) # Need to use rectified image instead
 
 		rospy.Subscriber("/camera/depth_registered/image", Image, self.depth_cb)
-		self.br = tf.TransformBroadcaster()
+		rospy.Subscriber("publish_bob", Bool, self.set_publish_bob)
 
+		self.br = tf.TransformBroadcaster()
+		self.lr = tf.TransformListener()
+
+		self.waiter_pose_pub = rospy.Publisher("/waiter_pose", Float32, queue_size=10)
 
 		fx = 497.644645
 		fy = 496.090002		
@@ -35,6 +41,8 @@ class CV:
 		#jank
 		#rospy.Subscriber("/reasonable_bob_location", Float32MultiArray, self.bob_cb)
 
+	def set_publish_bob(self, msg):
+		self.publish_bob = msg.data
 
 	def depth_cb(self, msg):
 		try:
@@ -57,7 +65,7 @@ class CV:
 	def process(self):
 		if self.rgb_image == None or self.depth_image == None: 
 			return
-		depth_mask = self.filter_depth(self.depth_image, 1.0, 0.0)
+		depth_mask = self.filter_depth(self.depth_image, 1.6, 0.0)
 
 		cv_image = cv2.bitwise_and(self.rgb_image,self.rgb_image,mask = depth_mask)
 
@@ -110,14 +118,41 @@ class CV:
 		cv2.imshow("bob", merged_bob)
 		cv2.waitKey(3)	
 
-		depth_image = cv2.bitwise_and(self.depth_image,self.depth_image,mask = merged_bob_reduced)
-		depth_image[(np.isnan(depth_image)==True)] = 0
-		centroid = self.depthImage2XYZ(depth_image)
-		print centroid
-		if centroid is not None:
-			self.br.sendTransform(centroid, (1,0,0,0),
-				rospy.get_rostime(),
-				"bob", "camera")
+		if self.publish_bob:
+			depth_image = cv2.bitwise_and(self.depth_image,self.depth_image,mask = merged_bob_reduced)
+			depth_image[(np.isnan(depth_image)==True)] = 0
+			centroid = self.depthImage2XYZ(depth_image)
+			print centroid
+			if centroid is not None:
+				self.br.sendTransform(centroid, (1,0,0,0),
+					rospy.get_rostime(),
+					"bob_noisy", "camera")
+				try:
+					map_bob_noisy = self.lr.lookupTransform("/map", "/bob_noisy",rospy.Time(0))
+					self.br.sendTransform(map_bob_noisy[0], map_bob_noisy[1],
+						rospy.get_rostime(),
+						"bob", "bob_odom")
+					# waiter_pose_msg = PoseWithCovarianceStamped()
+					# waiter_pose_msg.pose.pose.position.x = map_bob_noisy[0][0]
+					# waiter_pose_msg.pose.pose.position.y = map_bob_noisy[0][1]
+					# waiter_pose_msg.pose.pose.position.z = map_bob_noisy[0][2]
+					# waiter_pose_msg.pose.pose.orientation.x = map_bob_noisy[1][0]
+					# waiter_pose_msg.pose.pose.orientation.y = map_bob_noisy[1][1]
+					# waiter_pose_msg.pose.pose.orientation.z = map_bob_noisy[1][2]
+					# waiter_pose_msg.pose.pose.orientation.w = map_bob_noisy[1][3]
+					# waiter_pose_msg.pose.covariance =  (1, 0, 0, 0, 0, 0,
+					# 									0, 0, 0, 0, 0, 0,
+					# 									0, 0, 0, 0, 0, 0,
+					# 									0, 0, 0, 0, 0, 0,
+					# 									0, 0, 0, 0, 0, 0,
+					# 									0, 0, 0, 0, 0, 0)
+					# waiter_pose_msg.header.frame_id = "bob_odom"
+					# waiter_pose_msg.header.stamp = rospy.get_rostime()
+					self.waiter_pose_pub.publish(map_bob_noisy[0][0])
+
+				except:
+					print "lookup error"
+
 
 		self.rgb_image = None
 		self.depth_image = None

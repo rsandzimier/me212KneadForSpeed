@@ -38,7 +38,7 @@ def main():
 def apriltag_callback(data):
     # use apriltag pose detection to find where is the robot
     for detection in data.detections:
-        if detection.id in [0,1,3]:   # tag id is the correct one
+        if detection.id in [0,1,3,4,5]:   # tag id is the correct one
             poselist_tag_cam = pose2poselist(detection.pose)
             poselist_tag_base = transformPose(lr, poselist_tag_cam, 'camera', 'base_link')
             poselist_base_tag = invPoselist(poselist_tag_base)

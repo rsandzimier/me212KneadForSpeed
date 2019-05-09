@@ -6,6 +6,7 @@ import tf
 import time
 import utils
 
+from std_msgs.msg import Bool
 from geometry_msgs.msg import PolygonStamped, Pose
 from visualization_msgs.msg import Marker
 from mobile_robot.msg import WheelCmdVel
@@ -30,6 +31,7 @@ class PurePursuit(object):
 		self.listener = tf.TransformListener()
 		self.broadcaster = tf.TransformBroadcaster()
 
+		self.finished_pub = rospy.Publisher("finished_mobile_traj", Bool, queue_size=10)
 		self.pt_pub = rospy.Publisher("robot_point", Marker, queue_size=10)
 		self.circle_pub = rospy.Publisher("lookahead_circle", Marker, queue_size=10)
 		self.drive_pub = rospy.Publisher(self.drive_topic, WheelCmdVel, queue_size=10)
@@ -43,8 +45,8 @@ class PurePursuit(object):
 			y = trans[1]
 			th = tf.transformations.euler_from_quaternion(rot)
 			self.pursue([x, y, th])
-		except :
-			print("lookup")
+		except:
+			print("error in transformation")
 
 	def trajectory_callback(self, msg):
 		''' Clears the currently followed trajectory, and loads the new one from the message
@@ -60,7 +62,7 @@ class PurePursuit(object):
 			return
 		print("pursue")
 		x, y, th = car_pos
-		point_found, carrot_pos, direction = self.trajectory.find_drive_point(np.array([x, y]), lookahead)
+		point_found, carrot_pos, direction = self.trajectory.find_drive_point(np.array([x, y]), self.lookahead)
 		pose = Pose()
 		pose.position.x = carrot_pos[0]
 		pose.position.y = carrot_pos[1]
@@ -94,7 +96,7 @@ class PurePursuit(object):
 		cylMarker.header.frame_id = "map"
 		cylMarker.scale.x = self.lookahead*2
 		cylMarker.scale.y = self.lookahead*2
-		cylMarker.scale.z = 0.0
+		cylMarker.scale.z = 0.1
 		cylMarker.color.a = 0.5
 		cylMarker.color.g = 1.0
 		cylMarker.pose = cpose
@@ -112,6 +114,7 @@ class PurePursuit(object):
 			if point_found:
 				self.send_commands(curvature, self.speed*direction)
 			else:
+				self.finished_pub.publish(True)
 				self.send_commands(curvature, 0.0)
 		except:
 			pass

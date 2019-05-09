@@ -153,16 +153,19 @@ class LineTrajectory(object):
         for i in range(min(len(points)-2, seg + 2), seg-1, -1):
             cp1 = points[i]
             cp2 = points[i+1]
-            s1 = self.speed_profile[i]
-            s2 = self.speed_profile[i+1]
             inter_found, intersection = self.find_intersection(cp1, cp2, pos, r)
             if inter_found:
-                speed = self.distance(cp1, intersection)/self.distance(cp1, cp2) * (s2-s1) + s1
+                if self.speed_profile == []:
+                    print "speed profile empty"
+                    speed = -1
+                else:
+                    print "speed", self.speed_profile
+                    speed = self.speed_profile[0]
                 return True, intersection, speed
-        s1 = self.speed_profile[seg]
-        s2 = self.speed_profile[seg+1]
-        speed = self.distance(points[seg], closest_pt)/ \
-                self.distance(points[seg], points[seg+1]) * (s2-s1) + s1
+        if self.speed_profile == []:
+            speed = -1
+        else:
+            speed = self.speed_profile[0]
         return True, closest_pt, speed
 
     def addPoint(self, point):
