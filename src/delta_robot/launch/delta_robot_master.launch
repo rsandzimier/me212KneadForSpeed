@@ -1,9 +1,9 @@
 <launch>
 	<include file="$(find delta_robot)/launch/frames.launch"/>
 	<include file="$(find delta_robot)/launch/start_gripper_controller.launch"/>
+	<include file="$(find delta_robot)/launch/delta_apriltag.launch"/>
 	<node pkg="delta_robot" name="trajectory_follower" type="trajectory_follower_node.py" output="screen"/>
 	<node pkg="delta_robot" name="trajectory_planner" type="trajectory_planner_node.py" output="screen"/>
-	<node pkg="usb_cam" name="delta_robot_camera" type="usb_cam_node"/>
 	<node pkg="delta_robot" name="cv" type="cv_node.py" output="screen"/>
 	<node pkg="delta_robot" name="gripper" type="gripper_node.py"/>
 	<node pkg="delta_robot" name="interface" type="interface_node.py"/>

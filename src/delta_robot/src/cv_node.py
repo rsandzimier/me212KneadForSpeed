@@ -8,6 +8,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 from delta_robot.msg import Detection
 from delta_robot.msg import DetectionArray
+from std_msgs.msg import Float32
 import cv2
 #import cv2.cv as cv
 import numpy as np
@@ -18,10 +19,17 @@ class CV:
 
 	def __init__(self):
 		self.rate = 100 #[Hz]
+		self.CameraAngle = None#math.radians(self.CAMERA_TILT)  #angle of camera lens relative to vertical
+		self.z0 = 0.0
+		self.CameraHeight = 839
+
+
 		rospy.Subscriber("/usb_cam/image_raw", Image, self.image_cb) # Need to use rectified image instead
 
 		self.toppings_pub = rospy.Publisher("/toppings", DetectionArray, queue_size=10)
 		self.slots_pub = rospy.Publisher("/slots", DetectionArray, queue_size=10)
+
+		rospy.Subscriber("/camera_angle", Float32, self.camera_angle_cb, queue_size = 1)
 
 		self.bridge = CvBridge()
 		self.image_dims = []
@@ -44,23 +52,17 @@ class CV:
 
 
 
-		self.CameraAngle = math.radians(self.CAMERA_TILT)  #angle of camera lens relative to vertical
-		self.CameraHeight = 839
-		self.z0 = 839/math.cos(self.CameraAngle)                   #851.942927372   absolute distance of camera lens from table in millimeters
-		self.CameraLenstoOrigin = [271 , 36.6 , 52] #in world frame
+		
+                  #851.942927372   absolute distance of camera lens from table in millimeters
 
-		self.rotationMatrixX = np.array([[1,0,0], 
-		                                [0,math.cos(math.pi-self.CameraAngle),-math.sin(math.pi-self.CameraAngle)],
-		                                [0,math.sin(math.pi-self.CameraAngle),math.cos(math.pi-self.CameraAngle)]]) #rotation from world frame to camera frame -should just be a rotation about world x-axis
-		#Rotate 90 about z 
-		self.rotationMatrixZ = np.array([[0,1,0],
-		                                 [-1,0,0],
-		                                 [0,0,1]]) 
-		self.rotationMatrix = np.matmul(self.rotationMatrixZ,self.rotationMatrixX)  
 
-		self.translationVector = np.array([self.CameraLenstoOrigin[0],self.CameraLenstoOrigin[1],self.CameraLenstoOrigin[2]])        
+	def camera_angle_cb(self,msg):
+		self.CameraAngle = msg.data
+		self.z0 = 839/math.cos(self.CameraAngle) 
+		print(self.CameraAngle)
 
 	def image_cb(self,msg):
+		if self.CameraAngle == None: return
 		try:
 			cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
 		except CvBridgeError as e:
@@ -123,7 +125,7 @@ class CV:
 			pizza_circles = []
 		else:
 			pizza_circles = pizza_circles[0]
-		print(pizza_circles)
+		#print(pizza_circles)
 
 		slot_circles = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 16, param2=10, minRadius = 10, maxRadius = 18)
 		if (slot_circles == None):
