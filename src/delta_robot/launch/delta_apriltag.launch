@@ -1,0 +1,6 @@
+<launch>
+	<include file="$(find apriltags2_ros)/launch/continuous_detection.launch">
+		<arg name="camera_name" value="usb_cam"/>
+	</include>
+	<node pkg="delta_robot" name="delta_apriltag" type="camera_calibration_apriltag.py" output = "screen"/>
+</launch>
