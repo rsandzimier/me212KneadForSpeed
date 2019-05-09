@@ -36,6 +36,8 @@ class CV:
 
 		# Camera_Calibration Parameters
 		self.tf_listener = tf.TransformListener()
+		self.tf_broadcaster = tf.TransformBroadcaster()
+
 		rospy.sleep(0.2)
 
 		self.tf_transformer = tf.TransformerROS(True, rospy.Duration(10.0))
@@ -49,17 +51,22 @@ class CV:
 		'''self.pixelUV = [320,240] #initialize pixel coords and orientation for testing
 		self.pixelOrientation = math.radians(45)'''
 
+	#851.942927372   absolute distance of camera lens from table in millimeters
 
-
-		
-                  #851.942927372   absolute distance of camera lens from table in millimeters
-
-
+	def publish_transform(self,event):
+		self.tf_broadcaster.sendTransform((-0.271, -0.0366, -0.052),
+		tf.transformations.quaternion_from_euler(self.CameraAngle+math.pi, 0.0,-1.57079633),
+		rospy.Time.now(),
+		"delta_camera",
+		"delta_robot")
 
 	def camera_angle_cb(self,msg):
 		self.CameraAngle = msg.data
 		self.z0 = 839/math.cos(self.CameraAngle) 
-		print(self.CameraAngle)
+		print(str(self.CameraAngle)+"===================")
+
+		rospy.Timer(rospy.Duration(1./self.rate), self.publish_transform)
+
 
 	def image_cb(self,msg):
 		if self.CameraAngle == None: return

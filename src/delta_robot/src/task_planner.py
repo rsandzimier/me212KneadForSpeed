@@ -24,7 +24,7 @@ class TaskPlanner():
 	SQR_DISTANCE_THRESHOLD = 25 #maximum distance for a detection to be considered the same as another detection and merged
 	DETECTION_NUM_THRESHOLD = 50 #minimum number of detections in the last MAX_HISTORY_LENGTH for an object to be counted
 	DETECTION_NUM_LIMIT = 100 #Number of frames to listen to the camera initially
-	ITERATIONS = 2
+	ITERATIONS = 0
 	#Format of pose:
 	#[x position cm, y position cm, z position cm, gripper angle rad, gripper open (positive)]
 
@@ -268,7 +268,9 @@ class TaskPlanner():
 
 	def run_task(self, msg):
 		#Runs the entire delta robot task list
+		i=0
 		for i in range(self.ITERATIONS):
+			print("going home")
 			self.go_home()
 			print("Gathering data about toppings and slots")
 			self.using_camera_counter_t = 0
@@ -335,18 +337,21 @@ class TaskPlanner():
 		pizza_pose = KFSPose()
 		shaker_pose=KFSPose()
 		shaker=self.choose_topping_of_type(5)
-		shaker_pose.position=shaker.position
-		shaker_pose.orientation=shaker.orientation
-		shaker_pose.position.z += 37.0
 		pizza=self.choose_topping_of_type(6)
-		pizza_pose.position=pizza.position
-		pizza_pose.orientation=pizza.orientation
-		move_msg = KFSPoseArray()
-		move_msg.poses = [shaker_pose, pizza_pose]
-		print("going to salt pizza")
-		self.shaker_pub.publish(move_msg)
-		rospy.wait_for_message("/finished_task", Bool)
-		print("salted pizza")
+		if (shaker != None and pizza != None):
+			shaker_pose.position=shaker.position
+			shaker_pose.orientation=shaker.orientation
+			shaker_pose.position.z += 37.0
+			pizza_pose.position=pizza.position
+			pizza_pose.orientation=pizza.orientation
+			move_msg = KFSPoseArray()
+			move_msg.poses = [shaker_pose, pizza_pose]
+			print("going to salt pizza")
+			self.shaker_pub.publish(move_msg)
+			rospy.wait_for_message("/finished_task", Bool)
+			print("salted pizza")
+		else:
+			print("Could not find shaker and/or pizza")
 
 		#Step 2: Wait for MR to come to position, then move pizza to MR
 		while (self.mobile_arrived == False):
@@ -364,7 +369,7 @@ class TaskPlanner():
 		print("Done loading MR!")
 		self.go_home()
 		print("Waiting 60 seconds for user to place dough and pressing tool on the table...")
-		rospy.sleep(60)
+		rospy.sleep(10)
 		#Dough pressing
 		print("Gathering data about dough and presser")
 		self.using_camera_counter_t = 0
@@ -377,14 +382,16 @@ class TaskPlanner():
 		presser_pose = KFSPose()
 		dough = self.choose_topping_of_type(7)
 		presser = self.choose_topping_of_type(8)
+		if (dough != None and presser != None):
+			dough_pose.position = dough.position
+			presser_pose.position = presser.position
 
-		dough_pose.position = dough.position
-		presser_pose.position = presser.position
-
-		move_msg = KFSPoseArray()
-		move_msg.poses = [presser_pose, dough_pose]
-		self.press_dough_pub.publish(move_msg)
-		rospy.wait_for_message("/finished_task", Bool)
+			move_msg = KFSPoseArray()
+			move_msg.poses = [presser_pose, dough_pose]
+			self.press_dough_pub.publish(move_msg)
+			rospy.wait_for_message("/finished_task", Bool)
+		else:
+			print("Missing the dough or the pressing tool")
 		self.go_home()
 		print("All done!")
 
@@ -458,22 +465,32 @@ class TaskPlanner():
 		#Also eliminates toppings that are too close together
 		#new_slot_list = self.slot_list.copy()
 		#new_topping_list = self.topping_list.copy()
-		for i in xrange(len(self.topping_list) - 1, -1, -1):
+		new_topping_list = []
+		new_slot_list = []
+		for i in range(len(self.topping_list)):
 			topping = self.topping_list[i]
 			closest_t_index = self.find_closest_topping(topping)
-			if topping.type > 4:
+			if topping.type > 4:#come back to me
+				new_topping_list.append(topping)
 				continue
-			if (self.sqrdist(topping.position, self.topping_list[closest_t_index].position) < 900):
-				print("Removed toppings "+str(topping)+","+str(self.topping_list[closest_t_index])+" that were too close")
-				del self.topping_list[i]
-				del self.topping_list[closest_t_index]
-				i = i - 1
-				continue
-			closest_s_index = self.find_closest_slot(topping)
-			if (self.sqrdist(topping.position, self.slot_list[closest_s_index].position) < 900):
-				print("Found occupied slot at "+str(self.slot_list[closest_s_index])+" for topping at "+str(topping)+". Removing")
-				del self.topping_list[i]
-				del self.slot_list[closest_s_index]
+			if (self.sqrdist(topping.position, self.topping_list[closest_t_index].position) > 900):
+				#print("Removed toppings "+str(topping)+","+str(self.topping_list[closest_t_index])+" that were too close")
+				#del self.topping_list[i]
+				#del self.topping_list[closest_t_index]
+				#i = i - 1
+				#continue
+				closest_s_index = self.find_closest_slot(topping)
+				if (self.sqrdist(topping.position, self.slot_list[closest_s_index].position) > 900):
+					#print("Found occupied slot at "+str(self.slot_list[closest_s_index])+" for topping at "+str(topping)+". Removing")
+					#del self.topping_list[i]
+					#del self.slot_list[closest_s_index]
+					print("added topping "+str(topping))
+					new_topping_list.append(topping)
+				else:
+					print("topping too close to slot")
+					self.slot_list.pop(closest_s_index)
+		self.topping_list = new_topping_list
+
 		print("Validated slots and toppings")
 
 

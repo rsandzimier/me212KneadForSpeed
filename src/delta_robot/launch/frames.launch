@@ -1,7 +1,6 @@
 <launch>
    <node name="tf_delta_map" pkg="tf" type="static_transform_publisher" args="2.0 2.0 1.13 -1.57079633 0.0 0.0 map delta_robot 10" />
-   <node name="tf_camera_delta" pkg="tf" type="static_transform_publisher" args="-0.271 -0.0366 -0.052 -1.57079633 0.0 3.31612558 delta_robot delta_camera 10" />
-   <node name="tf_gripper" pkg="tf" type="static_transform_publisher" args="0.012 -0.019 -0.121 0.0 0.0 0.0 delta_robot gripper 10"/>
+   <node name="tf_gripper" pkg="tf" type="static_transform_publisher" args="0.038 -0.014 -0.122 0.0 0.0 0.0 delta_robot gripper 10"/>
    <!--<node name="tf_camera_delta" pkg="tf" type="static_transform_publisher" args="-0.0 0.0 -0.0 -1.57079633 0.0 3.31612558 delta_robot delta_camera 10" />-->
 
 </launch>

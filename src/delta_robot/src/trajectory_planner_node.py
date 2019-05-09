@@ -22,7 +22,7 @@ class TrajectoryPlanner:
 	pizzaradius=130.0
 	shake_distance=10.0
 	ZOFFSET = 60.0
-	MAX_PRESS_RADIUS = 85
+	MAX_PRESS_RADIUS = 55
 	NUM_SHAKES = 6
 
 	def __init__(self): 
@@ -239,21 +239,21 @@ class TrajectoryPlanner:
 		presser_orientation=0
 		presser_xyz[0]=msg.poses[0].position.x
 		presser_xyz[1]=msg.poses[0].position.y
-		presser_xyz[2]=msg.poses[0].position.z
+		presser_xyz[2]=msg.poses[0].position.z+5
 		presser_orientation=msg.poses[0].orientation
 
 		above_presser_xyz=[0,0,0]
 		above_presser_orientation=0
 		above_presser_xyz[0]=msg.poses[0].position.x
 		above_presser_xyz[1]=msg.poses[0].position.y
-		above_presser_xyz[2]=msg.poses[0].position.z+self.ZOFFSET
+		above_presser_xyz[2]=msg.poses[0].position.z+self.ZOFFSET+75
 		above_presser_orientation=msg.poses[0].orientation
 
 		dest_xyz=[0,0,0]
 		dest_orientation=0
 		dest_xyz[0]=msg.poses[1].position.x
 		dest_xyz[1]=msg.poses[1].position.y
-		dest_xyz[2]=msg.poses[1].position.z
+		dest_xyz[2]=msg.poses[1].position.z+12
 		dest_orientation=msg.poses[1].orientation
 
 		above_dest_xyz=[0,0,0]
@@ -273,7 +273,20 @@ class TrajectoryPlanner:
 		print('grabbed presser')
 		self.generateMoveTo(above_presser_xyz,above_presser_orientation,False)
 		self.waitForTrajectoryToFinish()
-		r = 40.0
+		for i in range(4):
+			dest_xyz[0]=msg.poses[1].position.x
+			dest_xyz[1]=msg.poses[1].position.y
+			dest_xyz[2]=msg.poses[1].position.z+20-i*2
+			above_dest_xyz[0]=msg.poses[1].position.x
+			above_dest_xyz[1]=msg.poses[1].position.y
+			above_dest_xyz[2]=msg.poses[1].position.z+self.ZOFFSET
+			self.generateMoveTo(above_dest_xyz, above_dest_orientation, False)
+			self.waitForTrajectoryToFinish()
+			self.generateMoveTo(dest_xyz, dest_orientation, False)
+			self.waitForTrajectoryToFinish()
+			self.generateMoveTo(above_dest_xyz, above_dest_orientation, False)
+			self.waitForTrajectoryToFinish()
+		r = 20
 		while (r < self.MAX_PRESS_RADIUS):
 			theta=0.0
 			while theta<360.0:
@@ -283,7 +296,7 @@ class TrajectoryPlanner:
 				print([x_off,y_off,theta])
 				dest_xyz[0]=msg.poses[1].position.x+x_off
 				dest_xyz[1]=msg.poses[1].position.y+y_off
-				dest_xyz[2]=msg.poses[1].position.z
+				dest_xyz[2]=msg.poses[1].position.z+6
 				above_dest_xyz[0]=msg.poses[1].position.x+x_off
 				above_dest_xyz[1]=msg.poses[1].position.y+y_off
 				above_dest_xyz[2]=msg.poses[1].position.z+self.ZOFFSET
@@ -294,7 +307,7 @@ class TrajectoryPlanner:
 				self.generateMoveTo(above_dest_xyz, above_dest_orientation, False)
 				self.waitForTrajectoryToFinish()
 				theta+=30.0
-			r = r + 40.0
+			r = r + 20.0
 
 		self.generateMoveTo(above_presser_xyz, above_presser_orientation, False)
 		self.waitForTrajectoryToFinish()
