@@ -24,6 +24,7 @@ class TaskPlanner():
 	SQR_DISTANCE_THRESHOLD = 25 #maximum distance for a detection to be considered the same as another detection and merged
 	DETECTION_NUM_THRESHOLD = 50 #minimum number of detections in the last MAX_HISTORY_LENGTH for an object to be counted
 	DETECTION_NUM_LIMIT = 100 #Number of frames to listen to the camera initially
+	ITERATIONS = 2
 	#Format of pose:
 	#[x position cm, y position cm, z position cm, gripper angle rad, gripper open (positive)]
 
@@ -57,6 +58,7 @@ class TaskPlanner():
 		self.press_dough_pub = rospy.Publisher("/press_dough", KFSPoseArray, queue_size=10)
 		#self.calibration_pub = rospy.Publisher("/start_calibration", Bool, queue_size=10)
 		self.mobile_ready_pub = rospy.Publisher("/pizza_loaded", Bool, queue_size=10)
+		self.move_to_pub = rospy.Publisher("/move_to", KFSPose, queue_size=10)
 
 		self.calibrated = False
 		self.toppings = None
@@ -77,12 +79,22 @@ class TaskPlanner():
 
 		self.test_iter = -1
 
+		self.home_position = KFSPose()
+		self.home_position.position.x = 200
+		self.home_position.position.y = 0
+		self.home_position.position.z = -600
+		self.home_position.orientation = 0.0
+		self.home_position.open = False
+
 		self.using_camera_counter_t = 0
 		self.using_camera_counter_s = 0
 
 
 		# Set up timers. Parameters: t (time in seconds), function. Will call the specified function every t seconds until timer is killed or node is killed 
 		rospy.Timer(rospy.Duration(1./self.rate), self.debug)
+
+	def go_home(self):
+		self.move_to_pub.publish(self.home_position)
 
 	def debug(self, msg):
 		#print("debug message: ==================================")
@@ -256,63 +268,67 @@ class TaskPlanner():
 
 	def run_task(self, msg):
 		#Runs the entire delta robot task list
-		print("Gathering data about toppings and slots")
-		self.using_camera_counter_t = 0
-		self.using_camera_counter_s = 0
-		while (self.using_camera_counter_s < self.DETECTION_NUM_LIMIT or self.using_camera_counter_t < self.DETECTION_NUM_LIMIT):
-			rospy.sleep(0.1)
-			print(str(self.using_camera_counter_t)+","+str(self.using_camera_counter_s)+'\r')
-		#print(self.choose_topping_of_type(6))
-		print("Running full pizza task...")
-		#Step 1: Move toppings to pizza
-		#return
-		num_toppings = [2,2,2,2,1]
-		#0 -- pepperoni
-		#1 -- olive
-		#2 -- ham
-		#3 -- pineapple
-		#4 -- anchovy
-		#get toppings
-		t = 0
-		topping = None
-		print("Choosing toppings and slots")
-		slot = self.choose_slot()
-		if (slot == None):
-			print("No slots found!")
-		while (slot != None):
-			if (t > 4):
-				print("Ran out of topping types!")
-				break
-			if (num_toppings[t] != 0):
-				topping = self.choose_topping_of_type(t)
-				if (topping == None):
-					print("No toppings of type "+str(t))
+		for i in range(self.ITERATIONS)
+			self.go_home()
+			print("Gathering data about toppings and slots")
+			self.using_camera_counter_t = 0
+			self.using_camera_counter_s = 0
+			while (self.using_camera_counter_s < self.DETECTION_NUM_LIMIT or self.using_camera_counter_t < self.DETECTION_NUM_LIMIT):
+				rospy.sleep(0.1)
+				print(str(self.using_camera_counter_t)+","+str(self.using_camera_counter_s)+'\r')
+			print("Validating the slots and toppings")
+			self.validate_slots_toppings()
+			#print(self.choose_topping_of_type(6))
+			print("Running full pizza task...")
+			#Step 1: Move toppings to pizza
+			#return
+			num_toppings = [2,2,2,2,1]
+			#0 -- pepperoni
+			#1 -- olive
+			#2 -- ham
+			#3 -- pineapple
+			#4 -- anchovy
+			#get toppings
+			t = 0
+			topping = None
+			print("Choosing toppings and slots")
+			slot = self.choose_slot()
+			if (slot == None):
+				print("No slots found!")
+			while (slot != None):
+				if (t > 4):
+					print("Ran out of topping types!")
+					break
+				if (num_toppings[t] != 0):
+					topping = self.choose_topping_of_type(t)
+					if (topping == None):
+						print("No toppings of type "+str(t))
+						t = t + 1
+						continue
+					num_toppings[t] = num_toppings[t] - 1
+				else:
+					print("No more toppings of type "+str(t)+" needed")
 					t = t + 1
 					continue
-				num_toppings[t] = num_toppings[t] - 1
-			else:
-				print("No more toppings of type "+str(t)+" needed")
-				t = t + 1
-				continue
 
-			print("Moving topping...")
-			move_msg = KFSPoseArray()
-			slot_pose = KFSPose()
-			topping_pose = KFSPose()
-			slot_pose.position = slot.position
-			slot_pose.orientation = 0
-			topping_pose.position = topping.position
-			topping_pose.orientation = topping.orientation
-			move_msg.poses = [topping_pose, slot_pose]
+				print("Moving topping...")
+				move_msg = KFSPoseArray()
+				slot_pose = KFSPose()
+				topping_pose = KFSPose()
+				slot_pose.position = slot.position
+				slot_pose.orientation = 0
+				topping_pose.position = topping.position
+				topping_pose.orientation = topping.orientation
+				move_msg.poses = [topping_pose, slot_pose]
 
-			self.move_topping_pub.publish(move_msg)
-			if (rospy.wait_for_message("/finished_task", Bool).data == True):
-				print("Success!")
-			else:
-				print("Failed.")
-				num_toppings[t] += 1
-			slot = self.choose_slot()
-		print("Finished topping movement")
+				self.move_topping_pub.publish(move_msg)
+				if (rospy.wait_for_message("/finished_task", Bool).data == True):
+					print("Success!")
+				else:
+					print("Failed.")
+					num_toppings[t] += 1
+				slot = self.choose_slot()
+			print("Finished topping movement")
 
 		#shaker top half is about 47 mm off the ground, offset z by 37mm
 		print("getting pizza and shaker location")
@@ -345,7 +361,32 @@ class TaskPlanner():
 			print("Failed to load MR")
 			self.mobile_ready_pub.publish(True) #send it off anyway
 
-		print("Done task!")
+		print("Done loading MR!")
+		self.go_home()
+		print("Waiting 60 seconds for user to place dough and pressing tool on the table...")
+		rospy.sleep(60)
+		#Dough pressing
+		print("Gathering data about dough and presser")
+		self.using_camera_counter_t = 0
+		#self.using_camera_counter_s = 0
+		while (self.using_camera_counter_s < self.DETECTION_NUM_LIMIT or self.using_camera_counter_t < self.DETECTION_NUM_LIMIT):
+			rospy.sleep(0.1)
+			print(str(self.using_camera_counter_t)+","+str(self.using_camera_counter_s)+'\r')
+		print("Pressing dough with tool")
+		dough_pose = KFSPose()
+		presser_pose = KFSPose()
+		dough = self.choose_topping_of_type(7)
+		presser = self.choose_topping_of_type(8)
+
+		dough_pose.position = dough.position
+		presser_pose.position = presser.position
+
+		move_msg = KFSPoseArray()
+		move_msg.poses = [presser_pose, dough_pose]
+		self.press_dough_pub.publish(move_msg)
+		rospy.wait_for_message("/finished_task", Bool)
+		self.go_home()
+		print("All done!")
 
 	def choose_topping_of_type(self, t):
 		#returns the first instance (to be upgraded) of a topping of the numerical type supplied in the list
@@ -378,6 +419,65 @@ class TaskPlanner():
 	def sqrdist(self, pos1, pos2):
 		#Returns the squared distance between 2 points
 		return (pos1.x-pos2.x)**2 + (pos1.y-pos2.y)**2 + (pos1.z-pos2.z)**2
+
+	def find_closest_slot(self, detection):
+		i = 0
+		c = -1
+		min_dist = 9999999.0
+		pos1 = detection.position
+		while (i < len(self.slot_list)):
+			pos2 = self.slot_list.position
+			dist = self.sqrdist(pos1, pos2)
+			if (dist < min_dist):
+				min_dist = dist
+				c = i
+			i = i + 1
+		if min_dist > dist_thres:
+			return -1
+		else:
+			return c #returns -1 when the detection array is empty
+
+	def find_closest_topping(self, detection):
+		i = 0
+		c = -1
+		min_dist = 9999999.0
+		pos1 = detection.position
+		while (i < len(self.topping_list)):
+			if (self.topping_list[i] == detection):
+				i += 1
+				continue
+			pos2 = self.topping_list[i].position
+			dist = self.sqrdist(pos1, pos2)
+			if (dist < min_dist):
+				min_dist = dist
+				c = i
+			i = i + 1
+		if min_dist > dist_thres:
+			return -1
+		else:
+			return c #returns -1 when the detection array is empty
+
+	def validate_slots_toppings(self):
+		#Eliminates slots that have items in them, and eliminates toppings in those slots
+		#Also eliminates toppings that are too close together
+		#new_slot_list = self.slot_list.copy()
+		#new_topping_list = self.topping_list.copy()
+		for i in xrange(len(self.topping_list) - 1, -1, -1):
+			topping = self.topping_list[i]
+			closest_t_index = self.find_closest_topping(topping)
+			if (self.sqrdist(topping.position, self.topping_list[closest_t_index].position) < 100):
+				del self.topping_list[i]
+				del self.topping_list[closest_index]
+				print("Removed toppings that were too close")
+				continue
+			closest_s_index = self.find_closest_slot(topping)
+			if (self.sqrdist(topping.position, self.slot_list[closest_s_index].position) < 250):
+				print("Found occupied slot. Removing")
+				del self.topping_list[i]
+				del self.slot_list[closest_s_index]
+		print("Validated slots and toppings")
+
+
 
 if __name__ == "__main__":
 	rospy.init_node('task_planner', anonymous=True) # Initialize the node

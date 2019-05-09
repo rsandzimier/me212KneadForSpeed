@@ -18,8 +18,9 @@ class CV:
 
 	def __init__(self):
 		self.rate = 100 #[Hz]
-		rospy.Subscriber("/usb_cam/image_raw", Image, self.image_cb) # Need to use rectified image instead
+		#self.detection_phase = 1  
 
+		rospy.Subscriber("/usb_cam/image_raw", Image, self.image_cb) # Need to use rectified image instead
 		self.toppings_pub = rospy.Publisher("/toppings", DetectionArray, queue_size=10)
 		self.slots_pub = rospy.Publisher("/slots", DetectionArray, queue_size=10)
 
@@ -58,17 +59,19 @@ class CV:
 		                                 [0,0,1]]) 
 		self.rotationMatrix = np.matmul(self.rotationMatrixZ,self.rotationMatrixX)  
 
-		self.translationVector = np.array([self.CameraLenstoOrigin[0],self.CameraLenstoOrigin[1],self.CameraLenstoOrigin[2]])        
+		self.translationVector = np.array([self.CameraLenstoOrigin[0],self.CameraLenstoOrigin[1],self.CameraLenstoOrigin[2]])
+  
 
 	def image_cb(self,msg):
 		try:
 			cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
 		except CvBridgeError as e:
 			print(e)
+		cv2.imshow("Image Window", cv_image)
 		cv_image = cv_image[10:390,135:560]
 		if len(self.image_dims) == 0:
 			self.image_dims = cv_image.shape
-		#cv2.imshow("Image Window", cv_image)
+		
 		cv2.imshow("Image Window Cropped", cv_image)
 		cv2.waitKey(3)
 
@@ -101,11 +104,22 @@ class CV:
 		#cv2.imshow("HSV", olive)
 		# Ham
 		ham = self.noise_reduction(ham, 3, 1)
+
+		#Dough detection
+		dough = self.hsv_filter(cv_image, [90,30,70], [110,220,220], True)
+		presser = self.hsv_filter(cv_image, [170,180,20],[20,255,150])
+
+		dough = self.noise_reduction(dough, 3, 1)
+		#presser = self.noise_reduction(presser, 3, 1)
+		cv2.imshow("Dough", dough)
+
+		dough_img_poses = self.blob_detection(dough, 60, 0, display = True)
+		presser_img_poses = self.blob_detection(presser, 40, 0, display = False)
 		#saltshaker = self.noise_reduction(saltshaker ,3 ,1)
 		# Open slot
 
 		# Blob detection
-		pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=True)
+		pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=False)
 		pineapple_img_poses = self.blob_detection(pineapple, 20, 0, display=False)
 		anchovie_img_poses = self.blob_detection(anchovie, 20, 0, display=False)
 		olive_img_poses = self.blob_detection(olive, 20, 0, display=False)
@@ -166,6 +180,10 @@ class CV:
 			topping_detections.append(self.imgPose2DetectionMsg(p,5))
 		for p in pizza_circles:
 			topping_detections.append(self.imgPose2DetectionMsg(p,6))
+		for p in dough_img_poses:
+			topping_detections.append(self.imgPose2DetectionMsg(p,7))
+		for p in presser_img_poses:
+			topping_detections.append(self.imgPose2DetectionMsg(p,8))
 
 		slot_detections = []
 		for p in slot_circles:
@@ -178,6 +196,12 @@ class CV:
 		slots_msg = DetectionArray()
 		slots_msg.detections = slot_detections
 		self.slots_pub.publish(slots_msg)
+
+		
+
+
+
+
 
 	def imgPose2DetectionMsg(self, img_pose, detection_type):
 		# Takes in an image pose (x,y in pixels and orientation in radians) and outputs a detection message (x,y,z in mm, orientation in radians, and detection type)
