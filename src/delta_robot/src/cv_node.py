@@ -93,15 +93,15 @@ class CV:
 		# Open slot
 		slot = self.hsv_filter(cv_image, [170,180,20],[20,255,150])
 
-		#cv2.imshow("HSV", saltshaker)
+		#cv2.imshow("HSV", slot)
 		cv2.waitKey(3)
 		# Noise reduction
 		pepperoni = self.noise_reduction(pepperoni,3,1)
 		pineapple = self.noise_reduction(pineapple,3,1)
 		anchovie = self.noise_reduction(anchovie,3,1)
+		cv2.imshow("HSV", olive)
 		# Olive
 		olive = self.olive_blob_fill(olive, 3, 5)#Fill the olive in, erode away the pepperoni shadows
-		#cv2.imshow("HSV", olive)
 		# Ham
 		ham = self.noise_reduction(ham, 3, 1)
 
@@ -111,9 +111,9 @@ class CV:
 
 		dough = self.noise_reduction(dough, 3, 1)
 		#presser = self.noise_reduction(presser, 3, 1)
-		cv2.imshow("Dough", dough)
+		#cv2.imshow("Dough", dough)
 
-		dough_img_poses = self.blob_detection(dough, 60, 0, display = True)
+		dough_img_poses = self.blob_detection(dough, 60, 0, display = False)
 		presser_img_poses = self.blob_detection(presser, 40, 0, display = False)
 		#saltshaker = self.noise_reduction(saltshaker ,3 ,1)
 		# Open slot
@@ -122,7 +122,7 @@ class CV:
 		pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=False)
 		pineapple_img_poses = self.blob_detection(pineapple, 20, 0, display=False)
 		anchovie_img_poses = self.blob_detection(anchovie, 20, 0, display=False)
-		olive_img_poses = self.blob_detection(olive, 20, 0, display=False)
+		olive_img_poses = self.blob_detection(olive, 20, 0, display=True)
 		ham_img_poses = self.blob_detection(ham, 20, 0, display=False)
 		saltshaker_img_poses = self.blob_detection(saltshaker, 20, 0, display=False)
 		# Olive
@@ -137,7 +137,7 @@ class CV:
 			pizza_circles = []
 		else:
 			pizza_circles = pizza_circles[0]
-		print(pizza_circles)
+		#print(pizza_circles)
 
 		slot_circles = cv2.HoughCircles(slot, cv2.HOUGH_GRADIENT, 1, 16, param2=10, minRadius = 10, maxRadius = 18)
 		if (slot_circles == None):

@@ -268,7 +268,7 @@ class TaskPlanner():
 
 	def run_task(self, msg):
 		#Runs the entire delta robot task list
-		for i in range(self.ITERATIONS)
+		for i in range(self.ITERATIONS):
 			self.go_home()
 			print("Gathering data about toppings and slots")
 			self.using_camera_counter_t = 0
@@ -426,16 +426,13 @@ class TaskPlanner():
 		min_dist = 9999999.0
 		pos1 = detection.position
 		while (i < len(self.slot_list)):
-			pos2 = self.slot_list.position
+			pos2 = self.slot_list[i].position
 			dist = self.sqrdist(pos1, pos2)
 			if (dist < min_dist):
 				min_dist = dist
 				c = i
 			i = i + 1
-		if min_dist > dist_thres:
-			return -1
-		else:
-			return c #returns -1 when the detection array is empty
+		return c #returns -1 when the detection array is empty
 
 	def find_closest_topping(self, detection):
 		i = 0
@@ -443,19 +440,18 @@ class TaskPlanner():
 		min_dist = 9999999.0
 		pos1 = detection.position
 		while (i < len(self.topping_list)):
-			if (self.topping_list[i] == detection):
+			if (self.topping_list[i] == detection or self.topping_list[i].type > 4):
 				i += 1
 				continue
+
 			pos2 = self.topping_list[i].position
 			dist = self.sqrdist(pos1, pos2)
 			if (dist < min_dist):
 				min_dist = dist
 				c = i
 			i = i + 1
-		if min_dist > dist_thres:
-			return -1
-		else:
-			return c #returns -1 when the detection array is empty
+
+		return c #returns -1 when the detection array is empty
 
 	def validate_slots_toppings(self):
 		#Eliminates slots that have items in them, and eliminates toppings in those slots
@@ -465,14 +461,17 @@ class TaskPlanner():
 		for i in xrange(len(self.topping_list) - 1, -1, -1):
 			topping = self.topping_list[i]
 			closest_t_index = self.find_closest_topping(topping)
-			if (self.sqrdist(topping.position, self.topping_list[closest_t_index].position) < 100):
+			if topping.type > 4:
+				continue
+			if (self.sqrdist(topping.position, self.topping_list[closest_t_index].position) < 900):
+				print("Removed toppings "+str(topping)+","+str(self.topping_list[closest_t_index])+" that were too close")
 				del self.topping_list[i]
-				del self.topping_list[closest_index]
-				print("Removed toppings that were too close")
+				del self.topping_list[closest_t_index]
+				i = i - 1
 				continue
 			closest_s_index = self.find_closest_slot(topping)
-			if (self.sqrdist(topping.position, self.slot_list[closest_s_index].position) < 250):
-				print("Found occupied slot. Removing")
+			if (self.sqrdist(topping.position, self.slot_list[closest_s_index].position) < 900):
+				print("Found occupied slot at "+str(self.slot_list[closest_s_index])+" for topping at "+str(topping)+". Removing")
 				del self.topping_list[i]
 				del self.slot_list[closest_s_index]
 		print("Validated slots and toppings")
