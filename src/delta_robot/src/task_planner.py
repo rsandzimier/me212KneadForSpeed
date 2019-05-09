@@ -309,7 +309,8 @@ class TaskPlanner():
 			if (rospy.wait_for_message("/finished_task", Bool).data == True):
 				print("Success!")
 			else:
-				print("Failed (no change in logic)")
+				print("Failed.")
+				num_toppings[t] += 1
 			slot = self.choose_slot()
 		print("Finished topping movement")
 

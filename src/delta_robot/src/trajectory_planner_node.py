@@ -15,9 +15,9 @@ from workspace_checker import WorkspaceChecker
 import numpy as np
 
 class TrajectoryPlanner: 
-	XYZ_VEL = 100.0
+	XYZ_VEL = 150.0
 	XYZ_ACCEL = 800.0
-	XYZ_VEL_FAST = 100.0
+	XYZ_VEL_FAST = 400.0
 	XYZ_ACCEL_FAST = 4900.0
 	pizzaradius=130.0
 	shake_distance=10.0
@@ -46,6 +46,8 @@ class TrajectoryPlanner:
 
 		self.finished_task_pub = rospy.Publisher("/finished_task", Bool, queue_size=10)
 		self.trajectory_pub = rospy.Publisher("/trajectory", DeltaTrajectory, queue_size=10)
+
+		self.out_of_range = False
 
 	def finished_trajectory_cb(self, msg):
 		self.running_trajectory = not msg.data
@@ -90,24 +92,29 @@ class TrajectoryPlanner:
 
 		self.generateMoveTo(above_topping_xyz,above_topping_orientation,True)
 		self.waitForTrajectoryToFinish()
-		self.generateMoveTo(topping_xyz,topping_orientation,True)
-		self.waitForTrajectoryToFinish()
-		self.generateMoveTo(topping_xyz,topping_orientation,False)
-		self.waitForTrajectoryToFinish()
-		self.generateMoveTo(above_topping_xyz,above_topping_orientation,False)
-		self.waitForTrajectoryToFinish()
-		self.generateMoveTo(above_dest_xyz, above_dest_orientation, False)
-		self.waitForTrajectoryToFinish()
-		self.generateMoveTo(dest_xyz, dest_orientation, False)
-		self.waitForTrajectoryToFinish()
-		self.generateMoveTo(dest_xyz,dest_orientation,True)
-		self.waitForTrajectoryToFinish()
-		self.generateMoveTo(self.xyz_pos_init, 0, True)
-		self.waitForTrajectoryToFinish()
-		print("Moved topping!")
+		if (self.out_of_range == False):
+			self.generateMoveTo(topping_xyz,topping_orientation,True)
+			self.waitForTrajectoryToFinish()
+			self.generateMoveTo(topping_xyz,topping_orientation,False)
+			self.waitForTrajectoryToFinish()
+			self.generateMoveTo(above_topping_xyz,above_topping_orientation,False)
+			self.waitForTrajectoryToFinish()
+			self.generateMoveTo(above_dest_xyz, above_dest_orientation, False)
+			self.waitForTrajectoryToFinish()
+			self.generateMoveTo(dest_xyz, dest_orientation, False)
+			self.waitForTrajectoryToFinish()
+			self.generateMoveTo(dest_xyz,dest_orientation,True)
+			self.waitForTrajectoryToFinish()
+			self.generateMoveTo(self.xyz_pos_init, 0, True)
+			self.waitForTrajectoryToFinish()
+			print("Moved topping!")
 		self.running_task = False
 		finished_task_msg = Bool()
-		finished_task_msg.data = True
+		if (self.out_of_range):
+			finished_task_msg.data = False
+			self.out_of_range = False
+		else:
+			finished_task_msg.data = True
 		self.finished_task_pub.publish(finished_task_msg)
 
 	def shake_salt_cb(self,msg): 
@@ -158,19 +165,26 @@ class TrajectoryPlanner:
 		above_dest_right_xyz[1]=msg.poses[1].position.y
 		above_dest_right_xyz[2]=msg.poses[1].position.z+self.ZOFFSET+60.0
 		above_dest_right_orientation=msg.poses[1].orientation
+
+		
+
 		
 		self.generateMoveTo(above_shaker_xyz,above_shaker_orientation,True)
 		self.waitForTrajectoryToFinish()
 		self.generateMoveTo(shaker_xyz,shaker_orientation,True)
 		self.waitForTrajectoryToFinish()
-		self.generateMoveTo(shaker_xyz,shaker_orientation,False)
+		self.generateMoveTo(shaker_xyz,0.7,True)
+		self.waitForTrajectoryToFinish()
+		self.generateMoveTo(shaker_xyz,0.7, False)
 		self.waitForTrajectoryToFinish()
 		self.generateMoveTo(above_shaker_xyz,above_shaker_orientation,False)
 		self.waitForTrajectoryToFinish()
 		print('grabbed shaker')
 		
+		
 		self.generateMoveTo(above_dest_xyz, above_dest_orientation, False)
 		self.waitForTrajectoryToFinish()
+		'''
 		i=0
 		for i in range(self.NUM_SHAKES):
 			self.generateMoveToFAST(above_dest_left_xyz, dest_orientation, False)
@@ -178,11 +192,24 @@ class TrajectoryPlanner:
 			self.generateMoveToFAST(above_dest_right_xyz, dest_orientation, False)
 			self.waitForTrajectoryToFinish()
 			print('im shook for the '+str(i)+' time')
+		'''
 		'''self.generateMoveToFAST(above_dest_left_xyz, dest_orientation, False)
 		self.waitForTrajectoryToFinish()
 		self.generateMoveToFAST(above_dest_right_xyz, dest_orientation, False)
 		self.waitForTrajectoryToFinish()
 		print('im shook for the second time')'''
+
+		i = 0
+		shaker_shake_radius = 30
+		for i in range(0,480,15):
+			above_dest_circle = [above_dest_xyz[0]+shaker_shake_radius*math.cos(180/math.pi*i),
+								 above_dest_xyz[1]+shaker_shake_radius*math.sin(180/math.pi*i),
+								 above_dest_xyz[2]]
+			above_dest_circle_orientation = 0.0
+			self.generateMoveToFAST(above_dest_circle,0,False)
+			self.waitForTrajectoryToFinish()
+			print('we have gone'+str(i)+'around')
+
 
 		self.generateMoveTo(above_dest_xyz, above_dest_orientation, False)
 		self.waitForTrajectoryToFinish()
@@ -295,7 +322,7 @@ class TrajectoryPlanner:
 		dest_orientation=0
 		dest_xyz[0]=msg.position.x-self.pizzaradius
 		dest_xyz[1]=msg.position.y
-		dest_xyz[2]=msg.position.z
+		dest_xyz[2]=msg.position.z+10 #Go a little high on the pizza
 		dest_orientation=0.6
 
 		above_dest_xyz = [0,0,0]
@@ -455,6 +482,7 @@ class TrajectoryPlanner:
 			else: 
 				# print error 
 				print("error not in workspace")
+				self.out_of_range = True
 				return
 			g = GripperPosition()
 			g.open = gripper_open
@@ -471,6 +499,7 @@ class TrajectoryPlanner:
 			else: 
 				# print error 
 				print("error not in workspace")
+				self.out_of_range = True
 				return
 			g = GripperPosition()
 			g.open = gripper_open

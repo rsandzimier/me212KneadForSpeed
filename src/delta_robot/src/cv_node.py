@@ -77,7 +77,7 @@ class CV:
 		# Position Segment (topping location vs pizza location)
 
 		# HSV Filter
-		pepperoni = self.hsv_filter(cv_image, [155,64,50], [175,180,125], True)#All set
+		pepperoni = self.hsv_filter(cv_image, [150,64,40], [175,180,125], True)#All set
 		pineapple = self.hsv_filter(cv_image, [15,30,130], [30,128,225], True)#All set
 		olive = self.hsv_filter(cv_image, [100,47,0], [150,120,80], True) #Look good
 		anchovie = self.hsv_filter(cv_image, [110,75,48], [120,220,220], True) #All set
@@ -105,7 +105,7 @@ class CV:
 		# Open slot
 
 		# Blob detection
-		pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=False)
+		pepperoni_img_poses = self.blob_detection(pepperoni, 20, 0, display=True)
 		pineapple_img_poses = self.blob_detection(pineapple, 20, 0, display=False)
 		anchovie_img_poses = self.blob_detection(anchovie, 20, 0, display=False)
 		olive_img_poses = self.blob_detection(olive, 20, 0, display=False)
@@ -134,9 +134,9 @@ class CV:
 
 		#img = np.zeros(self.image_dims[0:2]).astype('uint8')
 		#img = cv2.bitwise_or(img, slot)
-		img = slot
+		#img = slot
 		#img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-		for i in range(0,len(slot_circles)):
+		'''for i in range(0,len(slot_circles)):
 			x = slot_circles[i][0]
 			y = slot_circles[i][1]
 			#th = blob_poses[i][2]
@@ -145,7 +145,7 @@ class CV:
 			#p1 = (int(x + l*math.cos(th)),int(y + l*math.sin(th)))
 			#p2 = (int(x - l*math.cos(th)),int(y - l*math.sin(th)))
 			#cv2.line(img, p1, p2, (0,0,255), thickness=2)
-		cv2.imshow("Blobs", img)
+		cv2.imshow("Blobs", img)'''
 		cv2.waitKey(3)
 
 
