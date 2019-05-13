@@ -24,11 +24,15 @@ class HighLevelTaskPlanner(object):
         self.trajectory_stop = LineTrajectory("/stop_trajectory")
 
         # list of (x, y)
-        self.delta_pts = [(1.93, 0.0), (2.06, 1.80)]
+        self.delta_pts = [(1.93, 0.0), (2.06, 1.85)]
         self.backup_pts = [(2.01, 1.80), (1.93, 0.7)]
         self.waiter_pts = [(1.93, 0.7), (1.75, 1.15),(1.38, 1.42), (1.10, 2.16), (.70, 2.00), (.69, 1.45)]        
         self.waiter_backup_pts = [(.69, 1.45), (.95, 2.07)]
-        self.right_finish_pts = [(0.45, 1.95),(0.4,0.96),(0.74,0.95),(1.1,0.76), (0.96, 0.3),(-0.1, .551)]
+        self.right_finish_pts = [(0.45, 1.95),(0.4,0.93),(0.74,0.92),(1.1,0.76), (0.96, 0.3),(-0.1, .551)]
+
+        # self.waiter_pts = [(1.93, 0.7), (1.75, 1.15),(1.38, 1.42), (1.10, 2.16), (.70, 2.00)]        
+        # self.right_finish_pts = [(0.70, 2.00),(0.4,0.96),(0.74,0.95),(1.1,0.76), (0.96, 0.3),(-0.1, .551)]
+
 
         self.left_finish_pts = [(.70, 2.00), (0.78, 1.04), (1.17, 0.50), (0.70, 0.43), (-0.1, .551)]
 
@@ -77,7 +81,7 @@ class HighLevelTaskPlanner(object):
 
         self.current_traj_index = 0
         self.trajectories = [self.trajectory_delta, self.trajectory_backup, self.trajectory_waiter, \
-                             self.trajectory_waiter_backup, self.trajectory_right_finish]
+                              self.trajectory_waiter_backup, self.trajectory_right_finish]
 
         rospy.sleep(0.2)
         self.planner()
@@ -87,14 +91,19 @@ class HighLevelTaskPlanner(object):
         if self.current_traj_index == 0:
             # publish delta trajectory
             self.traj_pub.publish(self.trajectory_delta.toPolygon())
-            # self.mobile_arrived_pub.publish(True)
             self.current_traj_index += 1
+
         elif self.current_traj_index == 1:
             #  wait for delta_robot confirmation then publish backup
-            rospy.wait_for_message("clicked_point", PointStamped)
-            # rospy.wait_for_message("pizza_loaded", Bool)
+            # rospy.wait_for_message("clicked_point", PointStamped)
+            self.mobile_arrived_pub.publish(True)
+            print('waiting for pizza message')
+            rospy.wait_for_message("pizza_loaded", Bool)
+            print('pizza message recived')
+            rospy.sleep(1)
             self.traj_pub.publish(self.trajectory_backup.toPolygon())
             self.current_traj_index += 1
+
         elif self.current_traj_index == 2:
             # immediately publish trajectory to waiter
             self.traj_pub.publish(self.trajectory_waiter.toPolygon())
@@ -109,27 +118,42 @@ class HighLevelTaskPlanner(object):
             # wait for waiter information
             # either publish left of right
             self.publish_bob_pub.publish(True)
+
             while self.path is None:
                 pass
-            while self.current_traj_index == 4:
-                if self.path == "right":
-                    # print "trying to go",self.path
-                    self.traj_pub.publish(self.trajectory_right_finish.toPolygon())
-                elif self.path == "left":
-                    # print "trying to go",self.path
-                    self.traj_pub.publish(self.trajectory_left_finish.toPolygon())
-                else:
-                    pass
-                    #print "self.path is not right or left", self.path
+            if self.path == "right":
+                print "trying to go",self.path
+                self.traj_pub.publish(self.trajectory_right_finish.toPolygon())
+            elif self.path == "left":
+                print "trying to go",self.path
+                self.traj_pub.publish(self.trajectory_left_finish.toPolygon())
+            else:
+                pass
 
-                try:
-                    trans, rot = self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
-                    print trans[1]
-                    if trans[1] < 1.70:
-                        self.current_traj_index += 1
-                except tf.LookupException:
-                    print("error in transformation")
-                rospy.sleep(0.03)
+            self.current_traj_index += 1
+                #print "self.path is not right or left", self.path
+
+            # while self.path is None:
+            #     pass
+            # while self.current_traj_index == 4:
+            #     if self.path == "right":
+            #         # print "trying to go",self.path
+            #         self.traj_pub.publish(self.trajectory_right_finish.toPolygon())
+            #     elif self.path == "left":
+            #         # print "trying to go",self.path
+            #         self.traj_pub.publish(self.trajectory_left_finish.toPolygon())
+            #     else:
+            #         pass
+            #         #print "self.path is not right or left", self.path
+
+            #     try:
+            #         trans, rot = self.listener.lookupTransform('/map', '/base_link', rospy.Time(0))
+            #         print trans[1]
+            #         if trans[1] < 1.70:
+            #             self.current_traj_index += 1
+            #     except tf.LookupException:
+            #         print("error in transformation")
+            #     rospy.sleep(0.03)
 
     def create_trajectory(self, traj, pts, speed):
         for x, y in pts:
@@ -150,23 +174,46 @@ class HighLevelTaskPlanner(object):
     def bob_cb(self, msg):
         self.past_bobs.append((msg.data, rospy.get_rostime().to_sec()))
         if len(self.past_bobs) < 15:# or self.path is not None:
+            print "holding to see bob for long enough"
             return
         x = 0.5*(self.past_bobs[0][0] + self.past_bobs[-1][0])
+        print "location of bob" , x
         v = (self.past_bobs[-1][0] - self.past_bobs[0][0])/(self.past_bobs[-1][1] - self.past_bobs[0][1])
         last_path = self.path
+        #DUMB DETECTION
+        # if abs(v) < .02:
+        #   if x > 0.45:
+        #       self.path = "right"
+        #   else:
+        #       self.path = "left"
+        # else:
+        #    pass
+
+        #NEW DETECTION OF THIRDS
+        # if abs(v) < .02:
+        #     if x > 0.73:
+        #         self.path = "right"
+        #     elif x < 0.45:
+        #         self.path = "left"
+        # else:
+        #     pass
+
+
+        #DETECTION OF THIRDS W/ VEL
         if abs(v) < .02:
-            if x > 0.45:
+            if x > 0.73:
                 self.path = "right"
-            else:
+            elif x < 0.45:
                 self.path = "left"
-        else:
+        else:        
             if v > 0:
                 self.path = "right"
             else:
                 self.path = "left"
+                
         if last_path!=self.path:
             print "changed path",last_path,"to",self.path
-        #print "path chosen", self.path, x, v
+        # print "path chosen", self.path, x, v
 
 
 if __name__=="__main__":

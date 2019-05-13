@@ -83,7 +83,7 @@ class CV:
 		# tray = self.hsv_filter(cv_image, [128,20,100], [180,100,128], True)
 		bow_tie = self.hsv_filter(cv_image, [160,200,0], [10,255,128], True)
 		hair = self.hsv_filter(cv_image, [160,128,64], [10,200,128], True)
-		pants = self.hsv_filter(cv_image, [120,50,20], [170,125,100], True)
+		pants = self.hsv_filter(cv_image, [155,95,20], [205,170,75], True)
 		skin = self.hsv_filter(cv_image, [150,40,128], [20,128,175], True)
 		tray = self.hsv_filter(cv_image, [128,20,100], [180,100,128], True)
 		#glass = self.hsv_filter(cv_image, [100,0,100], [150,40,175], True) # Glass too close to white color. Maybe don't use it
